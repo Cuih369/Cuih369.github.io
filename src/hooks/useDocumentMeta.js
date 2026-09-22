@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useScene } from '../context/SceneContext';
 import { ROOM_META as ROOMS_META, PATH_TO_ROOM as ROOMS_PATH_TO_ROOM } from '../config/rooms';
 import { SITE_NAME, SITE_DESCRIPTION } from '../config/site';
+import { useIsBlogOpen, isBlogOpen } from './useBlogRoute';
 
 /**
  * useDocumentMeta — Dynamic Meta Tags & Virtual Routing (History API)
@@ -35,11 +36,16 @@ export function getInitialRoomFromUrl() {
 
 export function useDocumentMeta() {
     const { currentRoom, teleportTo, hasEntered } = useScene();
+    const blogOpen = useIsBlogOpen();
     const isHandlingPopState = useRef(false);
     const lastPushedRoom = useRef(undefined); // Track what we last pushed to avoid duplicates
 
     // Update document meta and URL when room changes
     useEffect(() => {
+        // 博客页自己管 URL / 标题（见 useBlogRoute.useBlogDocumentMeta），
+        // 否则这里会把地址和 meta 又改回房间。
+        if (blogOpen) return;
+
         const roomKey = currentRoom === null ? 'null' : currentRoom;
         const meta = ROOM_META[roomKey] || ROOM_META['null'];
 
@@ -81,11 +87,15 @@ export function useDocumentMeta() {
         }
 
         isHandlingPopState.current = false;
-    }, [currentRoom]);
+    }, [currentRoom, blogOpen]);
 
     // Handle browser back/forward buttons
     useEffect(() => {
         const handlePopState = (event) => {
+            // 博客页的前进/后退交给 useBlogRoute 处理：
+            // 此时 3D 场景仍然停在原房间，不需要传送。
+            if (isBlogOpen()) return;
+
             isHandlingPopState.current = true;
             const targetRoom = event.state?.room ?? null;
             lastPushedRoom.current = targetRoom;

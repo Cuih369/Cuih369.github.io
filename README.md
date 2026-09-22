@@ -16,6 +16,40 @@
 | 关于 The About | `/about` | 在云层中飞行，途中经过奖项、里程碑与技术气球 |
 | 联系 Let's Connect | `/contact` | 码头场景，漂浮木桶承载社交链接，另有一张可填写的信纸表单 |
 
+## 写文章（博客）
+
+除 3D 场景外，站点还有一条纯阅读路线：**一篇文章 = `src/content/posts/` 下一个 `.md` 文件**，文件名就是网址。
+
+```bash
+# 新建 src/content/posts/my-post.md
+---
+title: 文章标题            # 必填
+date: 2026-09-22          # 必填，决定排序（越新越靠前）
+summary: 列表页与搜索引擎看到的摘要
+tags: [随记, 前端]         # 也可写成多行 - 随记
+cover: /images/cover.webp # 可选封面
+draft: false              # true = 只允许直链预览，不进列表与 sitemap
+slug: custom-url          # 可选，自定义网址
+---
+
+正文从这里开始……
+```
+
+写完即生效，不需要注册、不需要数据库。它会自动出现在：
+
+| 位置 | 说明 |
+|------|------|
+| `/blog` | 文章列表（标签筛选、阅读时长） |
+| `/blog/<slug>` | 文章正文（上一篇 / 下一篇、返回 3D 场景） |
+| `sitemap.xml` | 构建期生成，文章的 `lastmod` 取发布日期 |
+| JSON-LD | `Blog` + 每篇一个 `BlogPosting` |
+| `#seo-content`、`llms.txt` | 爬虫 / AI 引擎可见的文章清单 |
+
+Markdown 支持：标题、围栏代码、行内代码、引用、有序/无序列表、分隔线、粗体/斜体/删除线、链接/图片/裸链接。
+**不支持**表格、脚注、任务列表、嵌套列表与直接写 HTML（会原样显示，顺带避免注入脚本）。
+
+入口：进入 3D 场景后，右上角「阅读博客」按钮，或直接访问 `/blog`。阅读时左上角返回按钮会回到 3D 场景。
+
 ## 技术栈
 
 - **React 19** + **React Three Fiber 9**（Three.js 0.182）负责 3D 渲染
@@ -49,7 +83,7 @@ src/
 │   │   ├── entrance/      # 进门体验
 │   │   ├── rooms/         # 四个房间内部 + roomRegistry.jsx（房间组件映射）
 │   │   └── shaders/       # 自定义着色器材质
-│   ├── dom/               # 2D 覆盖层（Preloader、纸张转场）
+│   ├── dom/               # 2D 覆盖层（Preloader、纸张转场、Blog/BlogPage.jsx 博客页）
 │   └── ui/                # 导航、地图、成就、音频控件、无障碍层
 ├── config/
 │   ├── rooms.js           # ★ 房间注册表：走廊门 / 门牌 / 标题 / 传送坐标 / 地图 / 路由与 SEO 的唯一数据源
@@ -57,8 +91,9 @@ src/
 │   ├── fonts.js           # ★ 3D 文字字体路径 + 中文字符判断
 │   ├── sanity.js          # Sanity 客户端配置
 │   └── texturePreloadList.js
+├── content/               # ★ 博客文章：posts/*.md + 解析/渲染/取数（浏览器与构建期共用）
 ├── context/               # SceneContext（全局状态机）、音频、成就、性能分级
-├── hooks/                 # 相机、Sanity 数据、文档元信息
+├── hooks/                 # 相机、Sanity 数据、文档元信息、博客路由（useBlogRoute）
 └── styles/                # SCSS（按组件拆分 + 基础变量/混入）
 public/                    # 纹理、字体、音效、地图、robots.txt、_headers、_redirects
                            # （sitemap.xml 由构建期生成，不在仓库里）
@@ -83,6 +118,7 @@ portfolio-itom/            # 独立的 Sanity Studio（在它自己的目录里 
 | 预览域名防收录 | `public/_headers` | 按注释取消 `X-Robots-Tag: noindex` 并填项目名 |
 | 联系表单 | 环境变量 `VITE_WEB3FORMS_KEY` | 到 [Web3Forms](https://web3forms.com) 申领自己的 key；预览域名可用 `VITE_EXTRA_ALLOWED_ORIGINS` 放行（本地 localhost 始终放行） |
 | 内容源 | `src/config/sanity.js`、`portfolio-itom/` | 默认仍是上游的 Sanity 项目（`kv5wjjmj`），建议换成自己的项目 |
+| 文章 | `src/content/posts/*.md` | 示例文章（写作说明 + 设计取舍）可以直接删掉，换成自己的文章 |
 | 示例内容 | `rooms/Gallery/GalleryRoom.jsx`、`rooms/About/InfiniteSkyManager.jsx`、`rooms/Studio/contentData.js` | 目前是上游作者的示例作品/奖项，**必须替换成你自己的**（见 `docs/ARCHITECTURE.md` §10.3） |
 | 分享图 | `public/og-image.png` | 1200×630 占位图（纯文字，无美术素材）；换成自己的图后同步 `index.html` 与 `seo-plugin.js` 里的 `og:image` |
 | 素材版权 | `public/textures/**` | 上游手绘素材版权归原作者，长期公开发布请替换 |

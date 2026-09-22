@@ -10,9 +10,11 @@ import { initAudio } from './utils/audioManager';
 import { PerformanceProvider, usePerformance } from './context/PerformanceContext';
 import { SceneProvider, useScene } from './context/SceneContext';
 import NavigationUI from './components/ui/NavigationUI';
+import BlogPage from './components/dom/Blog/BlogPage';
 import GlobalOverlay from './components/ui/GlobalOverlay';
 import ScreenReaderOverlay from './components/ui/ScreenReaderOverlay';
 import { useDocumentMeta } from './hooks/useDocumentMeta';
+import { useBlogRoute } from './hooks/useBlogRoute';
 import posthog from 'posthog-js';
 import { loadSanityData } from './hooks/useSanityData';
 
@@ -134,6 +136,9 @@ function AppContent() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
 
+  // 2D 博客页（/blog、/blog/<slug>）：与 3D 场景共用 History API，遮罩盖在场景之上
+  const { open: blogOpen, closeBlog } = useBlogRoute();
+
   // Use Performance Context
   const { settings, downgradeTier, tier } = usePerformance();
 
@@ -197,10 +202,13 @@ function AppContent() {
             </Canvas>
           </div>
 
+          {/* 2D Blog Overlay - /blog 与 /blog/<slug>（在 3D 场景之上） */}
+          <BlogPage />
+
           {/* Navigation UI - Hamburger, Map, Back, Audio */}
           {isLoaded && (
             <>
-              <NavigationUI />
+              <NavigationUI onBackOverride={blogOpen ? () => closeBlog() : undefined} />
               <GlobalOverlay />
               <PaperTransition />
               <ScreenReaderOverlay />

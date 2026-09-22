@@ -1,0 +1,544 @@
+/* =============================================================================
+   BlogPage —— 2D 博客页（入口遮罩 + 列表 + 正文）
+   -----------------------------------------------------------------------------
+   约定：
+   - 遮罩 z-index 200，位于 3D UI（NavigationUI 100、地图/成就 95）之上；
+     打开博客时 NavigationUI 会加上 .over-blog（见下方 z-index 300）把返回按钮浮到最上层。
+   - 字体：中文正文用项目自带霞鹜文楷（public/fonts/LXGWWenKaiLite-Regular.ttf），
+     标题用 Rubik Scribble / Cabin Sketch，与 3D 场景的手绘纸质风格保持一致。
+   - 本文件只写「现代 CSS 直接合法」的写法（嵌套 + &），方便单独校验语法。
+   ============================================================================= */
+
+@font-face {
+    font-family: 'LXGW WenKai Lite';
+    src: url('/fonts/LXGWWenKaiLite-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+.blog-page {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    font-family: 'LXGW WenKai Lite', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Inter', sans-serif;
+    color: #1a1a1a;
+
+    &.is-visible {
+        opacity: 1;
+    }
+}
+
+/* 纸质底：白纱 + 纸纹理，与 .nav-btn / .studio-paper-card 同一张纹理 */
+.blog-backdrop {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
+        url('/textures/paper-texture.webp') center center;
+    background-size: cover;
+}
+
+.blog-scroll {
+    position: relative;
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+
+    &:focus {
+        outline: none;
+    }
+
+    &::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(26, 26, 26, 0.22);
+        border-radius: 6px;
+        border: 3px solid transparent;
+        background-clip: padding-box;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: rgba(26, 26, 26, 0.38);
+        background-clip: padding-box;
+    }
+}
+
+.blog-shell {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 88px 32px 72px;
+}
+
+/* === 页眉 === */
+.blog-masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 2px dashed rgba(26, 26, 26, 0.35);
+    margin-bottom: 40px;
+}
+
+.blog-brand {
+    font-family: 'Rubik Scribble', 'Cabin Sketch', cursive;
+    font-size: 1.7rem;
+    line-height: 1.2;
+    letter-spacing: 1px;
+    color: #1a1a1a;
+
+    &:hover {
+        text-decoration: underline;
+        text-decoration-style: wavy;
+        text-decoration-thickness: 2px;
+    }
+}
+
+.blog-brand-note {
+    font-family: 'Caveat', 'Cabin Sketch', cursive;
+    font-size: 1.15rem;
+    color: #6b6b6b;
+}
+
+/* === 列表头 === */
+.blog-hero {
+    margin-bottom: 28px;
+
+    & h1 {
+        font-family: 'Rubik Scribble', 'Cabin Sketch', cursive;
+        font-size: 2.6rem;
+        line-height: 1.15;
+        margin-bottom: 12px;
+    }
+
+    & p {
+        font-size: 1.05rem;
+        line-height: 1.9;
+        color: #4a4a4a;
+        max-width: 46em;
+    }
+}
+
+.blog-notice {
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    background: #fffaf0;
+    border: 2px dashed rgba(26, 26, 26, 0.45);
+    border-radius: 3px 220px 5px 200px / 200px 4px 190px 3px;
+    color: #7a5b1e;
+    font-size: 0.98rem;
+
+    & code {
+        font-family: 'Cabin Sketch', monospace;
+        font-weight: 700;
+    }
+}
+
+/* === 标签筛选 === */
+.blog-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 32px;
+}
+
+.blog-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    background: rgba(255, 255, 255, 0.85);
+    border: 2px solid #1a1a1a;
+    border-radius: 3px 200px 4px 190px / 190px 4px 180px 3px;
+    transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        background: #1a1a1a;
+        color: #fff;
+    }
+
+    &.is-active {
+        background: #1a1a1a;
+        color: #fff;
+    }
+}
+
+.blog-tag-count {
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+/* === 文章列表 === */
+.blog-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin: 0;
+    padding: 0;
+}
+
+.blog-card {
+    display: flex;
+    gap: 20px;
+    padding: 24px 26px;
+    background: #fff;
+    border: 2px solid #1a1a1a;
+    border-radius: 4px 240px 5px 220px / 220px 5px 210px 4px;
+    box-shadow: 5px 5px 0 rgba(26, 26, 26, 0.12);
+    color: inherit;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+
+    &:hover {
+        transform: translate(-2px, -3px);
+        box-shadow: 8px 9px 0 rgba(26, 26, 26, 0.18);
+    }
+}
+
+.blog-card-cover {
+    flex: 0 0 150px;
+    width: 150px;
+    height: 108px;
+    object-fit: cover;
+    border: 2px solid #1a1a1a;
+    border-radius: 2px 180px 3px 160px / 160px 3px 150px 2px;
+}
+
+.blog-card-body {
+    min-width: 0;
+}
+
+.blog-card-body h2 {
+    font-family: 'Rubik Scribble', 'Cabin Sketch', cursive;
+    font-size: 1.55rem;
+    line-height: 1.3;
+    margin-bottom: 8px;
+}
+
+.blog-card-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: #6b6b6b;
+}
+
+.blog-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba(26, 26, 26, 0.4);
+}
+
+.blog-card-summary {
+    margin-top: 10px;
+    font-size: 1rem;
+    line-height: 1.85;
+    color: #3d3d3d;
+}
+
+.blog-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.blog-chip {
+    display: inline-block;
+    padding: 2px 10px;
+    font-family: 'Cabin Sketch', cursive;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    color: #1a1a1a;
+    background: rgba(26, 26, 26, 0.06);
+    border: 1.5px dashed rgba(26, 26, 26, 0.5);
+    border-radius: 2px 60px 3px 50px / 50px 3px 45px 2px;
+}
+
+.blog-chip-draft {
+    color: #8a5a00;
+    background: #fff4d6;
+    border-color: rgba(138, 90, 0, 0.6);
+}
+
+.blog-empty {
+    padding: 32px 0;
+    font-size: 1rem;
+    color: #6b6b6b;
+
+    & code {
+        font-family: 'Cabin Sketch', monospace;
+        padding: 2px 6px;
+        background: rgba(26, 26, 26, 0.06);
+        border-radius: 3px;
+    }
+}
+
+/* 筛选结果为空时的小按钮（继承 .blog-link-btn） */
+.blog-empty-reset {
+    margin-left: 10px;
+    padding: 2px 10px;
+    font-size: 0.95rem;
+}
+
+/* === 文章正文 === */
+.blog-crumbs {
+    margin-bottom: 22px;
+}
+
+.blog-link-btn {
+    font-family: 'Cabin Sketch', cursive;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: #1a1a1a;
+    padding: 6px 14px;
+    border: 2px solid #1a1a1a;
+    border-radius: 3px 200px 4px 190px / 190px 4px 180px 3px;
+    background: rgba(255, 255, 255, 0.85);
+    transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        background: #1a1a1a;
+        color: #fff;
+    }
+}
+
+.blog-post-head {
+    margin-bottom: 28px;
+
+    & h1 {
+        font-family: 'Rubik Scribble', 'Cabin Sketch', cursive;
+        font-size: 2.4rem;
+        line-height: 1.2;
+        margin-bottom: 14px;
+    }
+}
+
+.blog-prose {
+    font-size: 1.06rem;
+    line-height: 2;
+    color: #1f1f1f;
+    word-break: break-word;
+
+    & > * + * {
+        margin-top: 1.1em;
+    }
+
+    & h2,
+    & h3,
+    & h4,
+    & h5,
+    & h6 {
+        font-family: 'Rubik Scribble', 'Cabin Sketch', cursive;
+        line-height: 1.35;
+        margin-top: 1.9em;
+        padding-bottom: 6px;
+        border-bottom: 2px dashed rgba(26, 26, 26, 0.28);
+    }
+
+    & h2 {
+        font-size: 1.7rem;
+    }
+
+    & h3 {
+        font-size: 1.4rem;
+    }
+
+    & h4,
+    & h5,
+    & h6 {
+        font-size: 1.2rem;
+    }
+
+    & a {
+        color: #1a1a1a;
+        text-decoration: underline;
+        text-decoration-style: dashed;
+        text-decoration-thickness: 1.5px;
+        text-underline-offset: 3px;
+
+        &:hover {
+            background: rgba(26, 26, 26, 0.08);
+        }
+    }
+
+    & strong {
+        font-weight: 700;
+    }
+
+    & del {
+        opacity: 0.6;
+    }
+
+    & ul,
+    & ol {
+        padding-left: 1.6em;
+    }
+
+    & li + li {
+        margin-top: 0.45em;
+    }
+
+    & blockquote {
+        padding: 4px 0 4px 18px;
+        border-left: 4px dashed rgba(26, 26, 26, 0.4);
+        color: #4a4a4a;
+        font-style: italic;
+    }
+
+    & hr {
+        border: none;
+        border-top: 2px dashed rgba(26, 26, 26, 0.3);
+        margin: 2.2em 0;
+    }
+
+    & code {
+        font-family: 'Cabin Sketch', 'SFMono-Regular', Consolas, monospace;
+        font-size: 0.95em;
+        padding: 2px 6px;
+        background: rgba(26, 26, 26, 0.07);
+        border-radius: 3px;
+    }
+
+    & pre.md-code {
+        padding: 16px 18px;
+        overflow-x: auto;
+        background: #f4f2ec;
+        border: 2px dashed rgba(26, 26, 26, 0.35);
+        border-radius: 3px 24px 4px 20px / 20px 4px 18px 3px;
+        line-height: 1.7;
+    }
+
+    & pre.md-code code {
+        padding: 0;
+        background: none;
+        font-size: 0.92rem;
+    }
+
+    & img {
+        max-width: 100%;
+        height: auto;
+        border: 2px solid #1a1a1a;
+        border-radius: 2px 200px 3px 180px / 180px 3px 170px 2px;
+    }
+}
+
+/* === 上一/下一篇 === */
+.blog-adjacent {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 48px;
+    padding-top: 28px;
+    border-top: 2px dashed rgba(26, 26, 26, 0.3);
+}
+
+.blog-adjacent-link {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 20px;
+    background: #fff;
+    border: 2px solid #1a1a1a;
+    border-radius: 3px 200px 4px 190px / 190px 4px 180px 3px;
+    box-shadow: 4px 4px 0 rgba(26, 26, 26, 0.12);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+
+    &:hover {
+        transform: translate(-2px, -3px);
+        box-shadow: 7px 8px 0 rgba(26, 26, 26, 0.18);
+    }
+
+    &.is-next {
+        text-align: right;
+        align-items: flex-end;
+    }
+}
+
+.blog-adjacent-label {
+    font-family: 'Cabin Sketch', cursive;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    color: #6b6b6b;
+}
+
+.blog-adjacent-title {
+    font-family: 'Rubik Scribble', 'Cabin Sketch', cursive;
+    font-size: 1.15rem;
+    line-height: 1.35;
+}
+
+.blog-footnote {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 2px dashed rgba(26, 26, 26, 0.3);
+}
+
+/* 博客打开时把整个 NavigationUI 提到遮罩之上：返回按钮可见，
+   其余面板在 NavigationUI 里已经按 onBackOverride 隐藏。 */
+.navigation-ui.over-blog {
+    z-index: 300;
+}
+
+/* === 响应式 === */
+@media (max-width: 768px) {
+    .blog-shell {
+        padding: 76px 18px 56px;
+    }
+
+    .blog-hero h1 {
+        font-size: 2rem;
+    }
+
+    .blog-post-head h1 {
+        font-size: 1.75rem;
+    }
+
+    .blog-card {
+        flex-direction: column;
+        padding: 18px 18px;
+    }
+
+    .blog-card-cover {
+        flex: none;
+        width: 100%;
+        height: 150px;
+    }
+
+    .blog-card-body h2 {
+        font-size: 1.3rem;
+    }
+
+    .blog-prose {
+        font-size: 1rem;
+        line-height: 1.95;
+    }
+
+    .blog-adjacent {
+        grid-template-columns: 1fr;
+    }
+
+    .blog-adjacent-link.is-next {
+        text-align: left;
+        align-items: flex-start;
+    }
+}

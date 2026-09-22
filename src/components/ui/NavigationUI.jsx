@@ -8,11 +8,33 @@ import AchievementPopup from './AchievementPopup';
 import AchievementsPanel from './AchievementsPanel';
 import '../../styles/NavigationUI.scss';
 import { ROOMS, MAP_PIN_ROOMS } from '../../config/rooms';
+import { openBlogIndex } from '../../hooks/useBlogRoute';
 
 // Pin starting position - the dashed circle at the bottom of the tower
 const PIN_START_POSITION = { x: 50.5, y: 97 };
 
-const NavigationUI = () => {
+/** 「阅读博客」按钮：进入走廊前后都可用，所以单独抽出来复用 */
+const BlogButton = ({ onClick }) => (
+    <button
+        className="nav-btn blog-btn"
+        onClick={onClick}
+        aria-label="阅读博客"
+    >
+        <svg viewBox="0 0 24 24" className="icon-blog">
+            <path d="M4 6a3 3 0 0 1 3-3h13v18H7a3 3 0 0 1-3-3z" />
+            <path d="M8 8h8M8 12h8M8 16h5" />
+        </svg>
+    </button>
+);
+
+/**
+ * NavigationUI —— 3D 场景的常驻 UI（返回 / 菜单 / 音频 / 成就）
+ *
+ * @param {{onBackOverride?: () => void}} props
+ *   onBackOverride 由 App 传入：博客遮罩打开时，返回按钮改为「关闭遮罩回到 3D 场景」，
+ *   同时隐藏菜单/音频/成就面板（它们只对 3D 场景有意义）。
+ */
+const NavigationUI = ({ onBackOverride }) => {
     const { currentRoom, isInRoom, requestExit, hasEntered, teleportTo, isTeleporting } = useScene();
     const { isMuted, toggleMute, globalVolume, setGlobalVolume } = useAudio();
     const { showTutorial, unlockAchievement } = useAchievements();
@@ -162,23 +184,30 @@ const NavigationUI = () => {
         teleportTo(roomId);
     };
 
+    // 只要有 onBackOverride（博客遮罩打开），返回按钮就一直可见
+    const showBackButton = Boolean(onBackOverride) || (hasEntered && isInRoom);
+
     const handleBackClick = () => {
+        if (onBackOverride) {
+            onBackOverride();
+            return;
+        }
         setIsExiting(true); // Immediately start exit animation
         // Request exit - DoorSection will handle the animation
         requestExit();
     };
 
     return (
-        <div className="navigation-ui">
+        <div className={`navigation-ui ${onBackOverride ? 'over-blog' : ''}`}>
             {/* Global Achievement Popup */}
             <AchievementPopup />
 
-            {/* Back Button - Only visible in rooms, hides up when clicked */}
-            {hasEntered && isInRoom && (
+            {/* Back Button - In rooms: exit room. On the blog overlay: close the overlay */}
+            {showBackButton && (
                 <button
-                    className={`nav-btn back-btn ${isExiting ? 'exiting' : ''}`}
+                    className={`nav-btn back-btn ${isExiting && !onBackOverride ? 'exiting' : ''}`}
                     onClick={handleBackClick}
-                    aria-label="返回走廊"
+                    aria-label={onBackOverride ? '返回 3D 场景' : '返回走廊'}
                 >
                     <svg viewBox="0 0 24 24" className="icon-back">
                         <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -186,9 +215,18 @@ const NavigationUI = () => {
                 </button>
             )}
 
+            {/* 还没进入走廊时也留一个博客入口：读者不必先逛 3D 才能看文章 */}
+            {!hasEntered && !onBackOverride && (
+                <div className="nav-controls">
+                    <BlogButton onClick={openBlogIndex} />
+                </div>
+            )}
+
             {/* Right side controls - Only visible after entering */}
-            {hasEntered && (
+            {hasEntered && !onBackOverride && (
                 <div className={`nav-controls ${isMenuOpen || isAudioMenuOpen ? 'menu-open' : ''} ${isUIHidden ? 'ui-hidden' : ''}`}>
+                    {/* Blog Button — 打开 2D 博客页（/blog） */}
+                    <BlogButton onClick={openBlogIndex} />
                     {/* Hamburger Menu Button */}
                     <button
                         className={`nav-btn hamburger-btn ${isMenuOpen ? 'open' : ''}`}
@@ -240,7 +278,7 @@ const NavigationUI = () => {
             )}
 
             {/* Map Panel - Drops from top when open */}
-            {hasEntered && (
+            {hasEntered && !onBackOverride && (
                 <div className={`map-panel ${isMenuOpen ? 'open' : ''}`} inert={!isMenuOpen ? true : undefined} ref={mapPanelRef} onKeyDown={handleMapKeyDown} role="dialog" aria-label="地图">
                     {/* SVG Border Overlay */}
                     <svg
@@ -366,7 +404,7 @@ const NavigationUI = () => {
             )}
 
             {/* Audio Panel — drops down from the button */}
-            {hasEntered && (
+            {hasEntered && !onBackOverride && (
                 <div className={`audio-panel ${isAudioMenuOpen ? 'open' : ''}`} inert={!isAudioMenuOpen ? true : undefined}>
                     <div className="audio-card">
                         <div className="audio-header">

@@ -42,6 +42,11 @@ const ScreenReaderOverlay = () => {
                 <h1>{AUTHOR_NAME} — {SITE_NAME}</h1>
                 <h2>作品集导航</h2>
 
+                <p>除了 3D 场景，还有一个可以直接阅读的博客页面：</p>
+                <ul>
+                    <li><a href="/blog">博客（文章列表）</a></li>
+                </ul>
+
                 {!hasEntered && (
                     <p>欢迎来到 {AUTHOR_NAME} 的交互式 3D 博客。点击门或按 Enter 键进入。</p>
                 )}

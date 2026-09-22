@@ -56,16 +56,23 @@ src/
 │   │   ├── shaders/              # RevealMaterial / PaintRevealMaterial / RevealBasicMaterial
 │   │   └── text/Text.jsx         # ★ 3D 文字统一入口：含中文自动切中文字体（见 §6.5）
 │   ├── dom/                      # Preloader / PaperTransition（纸张转场）
-│   └── ui/                       # NavigationUI(地图) / ScreenReaderOverlay / GlobalOverlay / 成就面板 / 音频控件
+│   │   └── Blog/BlogPage.jsx     # ★ 2D 博客页：列表 + 正文（/blog、/blog/<slug>，见 §7.1）
+│   └── ui/                       # NavigationUI(地图/返回/博客入口) / ScreenReaderOverlay / GlobalOverlay / 成就面板 / 音频控件
 ├── config/
 │   ├── rooms.js                  # ★ 房间注册表（唯一数据源，纯数据无 JSX）
 │   ├── site.js                   # ★ 站点配置：域名 / 站名 / 作者 / 社交链接（见 §6.5）
 │   ├── fonts.js                  # ★ 字体路径 + 「内容是否含中文」判断（见 §6.5）
 │   ├── sanity.js                 # Sanity 客户端 + 图片 URL 构造
 │   └── texturePreloadList.js     # 全部纹理的预加载清单（按场景分组导出）
+├── content/                      # ★ 博客文章（唯一数据源就是 posts/ 下的 .md）
+│   ├── posts/*.md                #   一篇文章 = 一个 Markdown 文件（front matter + 正文）
+│   ├── posts.js                  #   浏览器端取数：import.meta.glob(?raw) → ALL_POSTS / POSTS / 查询函数
+│   ├── postRecord.js             #   纯函数：原文 → 文章记录（构建期 seo-plugin.js 复用同一套）
+│   ├── frontmatter.js            #   零依赖 front matter 解析
+│   └── markdown.js               #   零依赖 Markdown 渲染 + 纯文本抽取 + 阅读时长
 ├── context/                      # SceneContext / AudioManager / AchievementsContext / PerformanceContext
-├── hooks/                        # useInfiniteCamera / useSanityData / useDocumentMeta
-├── styles/                       # SCSS
+├── hooks/                        # useInfiniteCamera / useSanityData / useDocumentMeta / useBlogRoute
+├── styles/                       # SCSS（BlogPage.scss 为博客页样式）
 └── utils/                        # audioManager / deviceDetect
 ```
 
@@ -75,7 +82,7 @@ public/          # ~430 文件 / 110 MB（textures 393 / 86.3 MB + 中文字体 
 functions/       # Cloudflare Pages Functions：sanity-cdn/[[catchall]].js（代理 cdn.sanity.io）
 portfolio-itom/  # 独立 Sanity Studio（自带 package.json，需单独 npm install；schemaTypes: galleryProject / studioItem / awardCertificate / globalInfo / faq）
 scripts/         # 构建期/维护脚本
-seo-plugin.js    # 构建期 Vite 插件：抓 Sanity 内容生成 SEO DOM + JSON-LD + llms.txt + sitemap.xml
+seo-plugin.js    # 构建期 Vite 插件：抓 Sanity 内容 + 读本地 Markdown 文章，生成 SEO DOM + JSON-LD + llms.txt + sitemap.xml
 vite.config.js   # react() + viteCompression() + generateSeoHtml()，dev 期 /sanity-cdn 代理
 ```
 
@@ -213,6 +220,49 @@ drei 的 `<Text>` 底层是 troika，一段文字只能用**一个**字体文件
 
 **实践含义**：要做博客内容，最省事的入口是替换第 3 层回退数据或接入自己的接口，而不必先搭 Sanity。
 
+### 7.1 博客文章（Markdown）——本项目的主内容源
+
+房间里的内容是「作品集」，文章则是博客的主体。文章**不经过 Sanity**，直接是仓库里的文件：
+
+```
+src/content/posts/hello-world.md   →   /blog/hello-world
+```
+
+**新增一篇文章 = 新建一个 .md 文件**，不需要改任何代码。它随后会自动出现在：`/blog` 列表、`/blog/<slug>` 正文页、构建期的 `sitemap.xml`、JSON-LD（`Blog` + `BlogPosting`）、`#seo-content` 隐藏列表与 `llms.txt`。
+
+| front matter | 必填 | 说明 |
+| --- | --- | --- |
+| `title` | ✅ | 文章标题（缺省回退成文件名） |
+| `date` | ✅ | `YYYY-MM-DD`，同时决定排序（越新越靠前）与 `lastmod` |
+| `summary` | | 列表页摘要 + SEO description |
+| `tags` | | `[a, b]` 或 `a, b`，也可写成多行 `- a` |
+| `cover` | | 封面图路径（可选） |
+| `draft` | | `true` 时不出现在列表 / sitemap，仍可用直链预览 |
+| `slug` | | 自定义网址（默认用文件名） |
+
+**数据流（两侧共用同一套解析，不会出现分歧）**
+
+```
+src/content/posts/*.md
+  ├── 浏览器：posts.js（import.meta.glob '?raw'）──┐
+  └── 构建期：seo-plugin.js（node:fs 读目录）──────┤
+                                                 └→ postRecord.js（解析 / slug / 日期 / 标签 / 排序）
+                                                      ├→ BlogPage.jsx 渲染
+                                                      └→ sitemap.xml · JSON-LD · #seo-content · llms.txt
+```
+
+- `frontmatter.js` / `markdown.js` / `postRecord.js` 都是**零依赖纯函数**（不使用 `import.meta`、不 import React、只用基础 API），所以能在 Vite、Node 构建脚本里同时跑。
+- 渲染器刻意只支持一个 Markdown 子集：标题（`#` 映射为 `h2`，文章标题已是 `h1`）、围栏代码、行内代码、引用、有序/无序列表、分隔线、`**粗体**`/`*斜体*`/`~~删除线~~`、链接/图片/裸链接。**不支持**表格、脚注、任务列表、嵌套列表与直写 HTML（会原样显示，顺带避免注入脚本）。先转义再插标签，`javascript:` 之类的链接会被丢弃。
+
+**路由**（`src/hooks/useBlogRoute.js`）
+
+- 模块级 store + `useSyncExternalStore`，不需要 Provider；App、`useDocumentMeta` 与页面都能读。
+- 与 3D 路由共用 History API，靠 `history.state` 区分：房间是 `{ room }`，博客是 `{ page: 'blog', slug }`。
+- `useDocumentMeta` 在博客打开时**直接 return**（并跳过 `popstate` 处理），否则房间逻辑会把 URL / 标题改回去；博客自己的 meta 由 `useBlogDocumentMeta` 负责。
+- 打开博客时记下「落脚点」（当前 path + room），关闭时 `pushState` 回该地址——好处是浏览器后退键仍能回到刚读的文章。
+
+**与 3D 场景的关系**：博客是盖在 canvas 之上的固定遮罩（`z-index: 200`），3D 场景在背后继续存在。打开时 App 给 `NavigationUI` 传 `onBackOverride`：返回按钮改为「关闭遮罩」，其余面板（地图/音频/成就）隐藏，并由 `.navigation-ui.over-blog` 把整个 UI 提到 `z-index: 300`，让返回按钮浮在遮罩之上。
+
 ---
 
 ## 8. 资源与性能管线
@@ -247,15 +297,20 @@ drei 的 `<Text>` 底层是 troika，一段文字只能用**一个**字体文件
 
 `useDocumentMeta` 用 History API 把房间映射成真实 URL（`/gallery`、`/studio`、`/about`、`/contact`）并同步 `document.title`、`meta[name=description]`、`og:*`、`link[rel=canonical]`，同时处理浏览器前进/后退（`popstate`）。`getInitialRoomFromUrl()` 支持深链直达。
 
+博客页（`/blog`、`/blog/<slug>`）走另一套更轻的路由 `src/hooks/useBlogRoute.js`（见 §7.1）；两套路由共用 History API，靠 `history.state` 区分，互不干扰。
+
 ### 9.2 构建期 SEO
 
 `seo-plugin.js` 是一个 Vite 插件，在构建时：
 
 - 抓取 Sanity 内容，生成 `#seo-content` 语义 DOM（爬虫可见，整段替换 `index.html` 的静态占位）；
-- 注入 JSON-LD 结构化数据（作者、房间列表、项目条目）；
-- 生成 `llms.txt`；
-- **从 `ROOMS` 生成 `sitemap.xml`**（新增房间自动进站点地图，无需手动维护）；
+- **读取 `src/content/posts/*.md`**（`node:fs`，复用 `postRecord.js`），把文章标题/日期/摘要追加进 `#seo-content`；
+- 注入 JSON-LD 结构化数据（作者、房间列表、项目条目，以及 `Blog` + 每篇一个 `BlogPosting`）；
+- 生成 `llms.txt`（含「博客文章」清单）；
+- **从 `ROOMS` 与文章生成 `sitemap.xml`**（新增房间 / 新增文章都自动进站点地图，无需手动维护；文章 `lastmod` = 发布日期）；
 - 覆写 `index.html` 的 `<title>` / `<meta name="description">` / `canonical` / `og:url` / `og:image` / `twitter:image`。
+
+> 博客这部分**不依赖 Sanity**：即使 Sanity 抓取失败（`catch` 分支），文章仍会带着自己的 JSON-LD 注入 SEO 输出。
 
 站点域名来自 `src/config/site.js`（`SITE_URL`），构建期可用环境变量 `SITE_URL` 或 `CF_PAGES_URL` 覆盖。
 
@@ -330,3 +385,10 @@ drei 的 `<Text>` 底层是 troika，一段文字只能用**一个**字体文件
 - 分享图：`public/og-image.webp`（上游作品截图）换成纯文字占位图 `public/og-image.png`，同步 `index.html` 与 `seo-plugin.js` 的 `og:image`。
 - 品牌文案：走廊大字 `ITOM` → `CUiH`、关于页署名、无障碍层标题、`localStorage` 成就键等；「联系方式」房间的社交木桶改为 `SOCIAL_URLS` 驱动（未填链接的平台不渲染）；工作室回退数据里的 28 条外链换成平台首页占位；`Google Search Console` 验证标签、`public/_headers`/`_redirects` 的域名硬编码、Sanity Studio 标题与包名一并清理。
 - 死代码：删调试用的 `#segmentIndex` 文字、`App.jsx` 未使用的 `Text` 导入；未使用的 npm 依赖保留待 `npm install` 时一并清理（见 §10.4）。
+
+**2026-09-22 · 博客内容接入（Markdown 文章 → 阅读页 → 构建期 SEO）**
+- 内容层：新增 `src/content/`——`posts/*.md`（文章）、`frontmatter.js`（零依赖 front matter 解析）、`markdown.js`（零依赖 Markdown 渲染 + `markdownToPlainText` + 阅读时长）、`postRecord.js`（原文 → 文章记录，浏览器与构建期共用）、`posts.js`（`import.meta.glob` 的 `?raw` 取数）。新增两篇示例文章（写作说明 + 设计取舍），可直接删除。
+- 路由：新增 `src/hooks/useBlogRoute.js`（模块级 store + `useSyncExternalStore`），`/blog` 与 `/blog/<slug>` 与房间路由共用 History API 并通过 `history.state` 区分；关闭博客时 `pushState` 回打开前的落脚点（后退键仍能回到文章）。`useDocumentMeta` 在博客打开时跳过 URL/meta 写入，避免两边打架。
+- UI：新增 `src/components/dom/Blog/BlogPage.jsx`（入口遮罩 + 列表 + 正文 + 标签筛选 + 上一篇/下一篇；进场/退场动画、焦点转移、Esc 关闭）与 `src/styles/BlogPage.scss`（沿用纸质手绘风格，中文正文用本地霞鹜文楷）；`App.jsx` 挂载遮罩；`NavigationUI` 新增 `onBackOverride`（打开博客时返回按钮变「关闭遮罩」、隐藏其它面板、加 `.over-blog` 提到 `z-index: 300`）与「阅读博客」按钮；`ScreenReaderOverlay` 增加 `/blog` 链接。
+- 构建期 SEO：`seo-plugin.js` 用 `node:fs` 读 `src/content/posts/*.md`（复用 `postRecord.js`），把文章写进 `sitemap.xml`（含每篇的 `lastmod` 与 `changefreq`）、JSON-LD（`Blog` + `BlogPosting`）、`llms.txt` 与 `#seo-content`；这部分放在 Sanity 的 `try/catch` 之外，Sanity 不可用时文章照样进 SEO。`index.html` 静态兜底同步补上 `/blog`。
+- 顺带修复：`markdown.js` 的行内代码规则改为成对反引号定界（用双反引号包住单个反引号的写法之前会漏出多余反引号）；`markdownToPlainText` 的标题曾错误输出 `#`。
