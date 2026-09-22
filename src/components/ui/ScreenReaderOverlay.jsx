@@ -1,6 +1,7 @@
 import { useScene } from '../../context/SceneContext';
 import { useGalleryProjects, useStudioContent, useAwards } from '../../hooks/useSanityData';
 import '../../styles/ScreenReaderOverlay.scss';
+import { ROOMS, getRoomById } from '../../config/rooms';
 
 // 平台标识 → 展示名称映射（供屏幕阅读器与爬虫读取）
 const PLATFORM_LABELS = {
@@ -48,26 +49,13 @@ const ScreenReaderOverlay = () => {
                     <>
                         <p>你正在走廊中。选择一个房间探索：</p>
                         <ul>
-                            <li>
-                                <button onClick={() => teleportTo('about')} type="button">
-                                    关于 — 我的故事、技能和经历
-                                </button>
-                            </li>
-                            <li>
-                                <button onClick={() => teleportTo('gallery')} type="button">
-                                    作品集 — 我的项目和作品
-                                </button>
-                            </li>
-                            <li>
-                                <button onClick={() => teleportTo('contact')} type="button">
-                                    联系 — 与我取得联系
-                                </button>
-                            </li>
-                            <li>
-                                <button onClick={() => teleportTo('studio')} type="button">
-                                    工作室 — 技术和经验
-                                </button>
-                            </li>
+                            {ROOMS.map((room) => (
+                                <li key={room.id}>
+                                    <button onClick={() => teleportTo(room.id)} type="button">
+                                        {room.sr.name} — {room.sr.hint}
+                                    </button>
+                                </li>
+                            ))}
                         </ul>
                     </>
                 )}
@@ -75,10 +63,7 @@ const ScreenReaderOverlay = () => {
                 {hasEntered && isInRoom && (
                     <>
                         <p>
-                            你正在{currentRoom === 'about' ? '关于' :
-                                currentRoom === 'gallery' ? '作品集' :
-                                    currentRoom === 'contact' ? '联系' :
-                                        currentRoom === 'studio' ? '工作室' : currentRoom}房间。
+                            你正在{getRoomById(currentRoom)?.sr.name || currentRoom}房间。
                         </p>
                         <button onClick={requestExit} type="button">
                             返回走廊
@@ -154,18 +139,13 @@ const ScreenReaderOverlay = () => {
                         {/* Quick navigation to other rooms */}
                         <h3>快速导航</h3>
                         <ul>
-                            {currentRoom !== 'about' && (
-                                <li><button onClick={() => teleportTo('about')} type="button">前往关于</button></li>
-                            )}
-                            {currentRoom !== 'gallery' && (
-                                <li><button onClick={() => teleportTo('gallery')} type="button">前往作品集</button></li>
-                            )}
-                            {currentRoom !== 'contact' && (
-                                <li><button onClick={() => teleportTo('contact')} type="button">前往联系</button></li>
-                            )}
-                            {currentRoom !== 'studio' && (
-                                <li><button onClick={() => teleportTo('studio')} type="button">前往工作室</button></li>
-                            )}
+                            {ROOMS.map((room) => (
+                                currentRoom !== room.id && (
+                                    <li key={room.id}>
+                                        <button onClick={() => teleportTo(room.id)} type="button">前往{room.sr.name}</button>
+                                    </li>
+                                )
+                            ))}
                         </ul>
                     </>
                 )}

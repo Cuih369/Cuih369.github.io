@@ -6,14 +6,9 @@ gsap.registerPlugin(Observer);
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAchievements } from '../context/AchievementsContext';
+// 相机经过门口时的自动瞥视位置（z / side）来自房间注册表
+import { CORRIDOR_DOOR_POSITIONS as DOOR_POSITIONS } from '../config/rooms';
 
-// Door positions for auto-glance
-const DOOR_POSITIONS = [
-    { z: -18, side: 'left' },
-    { z: -32, side: 'right' },
-    { z: -48, side: 'left' },
-    { z: -62, side: 'right' },
-];
 
 /**
  * useInfiniteCamera Hook

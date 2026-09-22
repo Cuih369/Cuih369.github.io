@@ -37,14 +37,22 @@ export const ROOMS = [
         },
 
         // ── 传送与相机 ──
-        doorZ: -6,      // segment 0 中该门的全局 Z：10 + relativeZ + 2（TeleportRoom 用）
+        doorZ: -6,      // segment 0 中该门的全局 Z：10 + relativeZ + 2（TeleportRoom 用）
+        warmupPosition: [-20, 0, 0],  // RoomWarmup 屏幕外预热挂载位置（scene 坐标）
 
         // ── 房间内容（通用房间的兜底标题/副标题）──
         title: '作品集',
         subtitle: '探索我的创意项目',
 
         // ── 地图引脚（NavigationUI）──
-        map: { x: 43, y: 72 },
+        map: {
+            x: 43, y: 72,                       // 地图引脚位置（百分比，见 NavigationUI）
+            zone: { left: '10%', top: '57%', width: '30%', height: '35%' },   // 悬停热区（原先散落在 NavigationUI.scss 的 .zone-gallery）
+            label: { left: '26%', top: '94%' }, // 常驻标签位置（原先散落在 .map-room-label.gallery）
+            paintedLayer: '/images/map_gallery_painted.webp',
+            clipExpanded: 'polygon(10% 57%, 40% 57%, 40% 92%, 10% 92%)',
+            clipCollapsed: 'polygon(10% 57%, 10% 57%, 10% 92%, 10% 92%)',
+        },
 
         // ── 路由与 SEO（useDocumentMeta）──
         path: '/gallery',
@@ -77,12 +85,20 @@ export const ROOMS = [
             },
         },
 
-        doorZ: -20,
+        doorZ: -20,
+        warmupPosition: [20, 0, 0],  // RoomWarmup 屏幕外预热挂载位置（scene 坐标）
 
         title: '工作室',
         subtitle: '观看幕后花絮',
 
-        map: { x: 57, y: 55 },
+        map: {
+            x: 57, y: 55,
+            zone: { left: '60%', top: '41%', width: '25%', height: '40%' },
+            label: { left: '72%', top: '75%' },
+            paintedLayer: '/images/map_studio_painted.webp',
+            clipExpanded: 'polygon(60% 41%, 85% 41%, 85% 81%, 60% 81%)',
+            clipCollapsed: 'polygon(85% 41%, 85% 41%, 85% 81%, 85% 81%)',
+        },
 
         path: '/studio',
         meta: {
@@ -113,12 +129,20 @@ export const ROOMS = [
             enterDistance: 25, // 相机深入房间的距离（云层在很远处）
         },
 
-        doorZ: -36,
+        doorZ: -36,
+        warmupPosition: [-20, 0, -50],  // RoomWarmup 屏幕外预热挂载位置（scene 坐标）
 
         title: '关于',
         subtitle: '',   // 该房间当前没有副标题（沿用原行为）
 
-        map: { x: 43, y: 38 },
+        map: {
+            x: 43, y: 38,
+            zone: { left: '10%', top: '20%', width: '30%', height: '35%' },
+            label: { left: '26%', top: '28%' },
+            paintedLayer: '/images/map_about_painted.webp',
+            clipExpanded: 'polygon(10% 20%, 40% 20%, 40% 55%, 10% 55%)',
+            clipCollapsed: 'polygon(10% 20%, 10% 20%, 10% 55%, 10% 55%)',
+        },
 
         path: '/about',
         meta: {
@@ -148,12 +172,20 @@ export const ROOMS = [
             },
         },
 
-        doorZ: -50,
+        doorZ: -50,
+        warmupPosition: [20, 0, -50],  // RoomWarmup 屏幕外预热挂载位置（scene 坐标）
 
         title: '联系我',
         subtitle: '与我取得联系',
 
-        map: { x: 57, y: 25 },
+        map: {
+            x: 57, y: 25,
+            zone: { left: '60%', top: '10%', width: '35%', height: '25%' },
+            label: { left: '76%', top: '14%' },
+            paintedLayer: '/images/map_contact_painted.webp',
+            clipExpanded: 'polygon(60% 10%, 95% 10%, 95% 35%, 60% 35%)',
+            clipCollapsed: 'polygon(95% 10%, 95% 10%, 95% 35%, 95% 35%)',
+        },
 
         path: '/contact',
         meta: {

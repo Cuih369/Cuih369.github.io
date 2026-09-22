@@ -9,6 +9,7 @@ import Avatar from './Avatar';
 import HeroText from './HeroText';
 import Doodles from './Doodles';
 import CorridorDecorations from './CorridorDecorations';
+import { ROOMS } from '../../../config/rooms';
 
 /**
  * CorridorSegment Component
@@ -43,45 +44,19 @@ const CorridorSegment = ({
 
     // Door positions within this segment (relative to segment start)
     const doors = useMemo(() => {
-        const doorDefs = [
-            {
-                id: `gallery-${segmentIndex}`,
-                roomId: 'gallery',
-                relativeZ: -18,
-                side: 'left',
-                label: 'THE GALLERY',
-                icon: '◈',
-                color: '#f5efe6'
-            },
-            {
-                id: `studio-${segmentIndex}`,
-                roomId: 'studio',
-                relativeZ: -32,
-                side: 'right',
-                label: 'THE STUDIO',
-                icon: '▶',
-                color: '#e6f5ef'
-            },
-            {
-                id: `about-${segmentIndex}`,
-                roomId: 'about',
-                relativeZ: -48,
-                side: 'left',
-                label: 'THE ABOUT',
-                icon: '★',
-                color: '#efe6f5',
-                enterDistance: 25 // Enter deep into the room (clouds are far back)
-            },
-            {
-                id: `connect-${segmentIndex}`,
-                roomId: 'contact',
-                relativeZ: -62,
-                side: 'right',
-                label: "LET'S CONNECT",
-                icon: '✉',
-                color: '#f5e6e6'
-            },
-        ];
+        // 门定义来自房间注册表（相对 Z / 左右侧 / 图标 / 颜色 / 进房距离）
+        const doorDefs = ROOMS.map((room) => ({
+            id: `${room.id}-${segmentIndex}`,
+            roomId: room.id,
+            relativeZ: room.corridor.relativeZ,
+            side: room.corridor.side,
+            label: room.label,
+            icon: room.corridor.icon,
+            color: room.corridor.color,
+            ...(room.corridor.enterDistance !== undefined
+                ? { enterDistance: room.corridor.enterDistance }
+                : {})
+        }));
 
         return doorDefs.map(def => {
             // Calculate adjusted Position and Rotation for Sawtooth Walls

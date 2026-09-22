@@ -1,11 +1,9 @@
 import { useRef, useState, Suspense } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
-// Eagerly import all room components
-import GalleryRoom from '../rooms/Gallery/GalleryRoom';
-import StudioRoom from '../rooms/Studio/StudioRoom';
-import AboutRoom from '../rooms/About/AboutRoom';
-import ContactRoom from '../rooms/Contact/ContactRoom';
+// 房间组件映射 + 房间注册表（必须在顶层静态导入：预热依赖急切挂载全部房间）
+import { ROOM_COMPONENTS } from '../rooms/roomRegistry';
+import { ROOMS } from '../../../config/rooms';
 import { isSanityDataLoaded } from '../../../hooks/useSanityData';
 
 /**
@@ -86,26 +84,19 @@ const RoomWarmup = ({ onWarmupComplete, isLowTier }) => {
     return (
         <group position={[0, -500, 0]}>
             {/* Mount all rooms in Suspense - positioned far below camera */}
-            <Suspense fallback={null}>
-                <group position={[-20, 0, 0]}>
-                    <GalleryRoom showRoom={true} onReady={noop} isExiting={false} isWarmup={true} />
-                </group>
-            </Suspense>
-            <Suspense fallback={null}>
-                <group position={[20, 0, 0]}>
-                    <StudioRoom showRoom={true} onReady={noop} isExiting={false} isWarmup={true} />
-                </group>
-            </Suspense>
-            <Suspense fallback={null}>
-                <group position={[-20, 0, -50]}>
-                    <AboutRoom showRoom={true} onReady={noop} isExiting={false} isWarmup={true} />
-                </group>
-            </Suspense>
-            <Suspense fallback={null}>
-                <group position={[20, 0, -50]}>
-                    <ContactRoom showRoom={true} onReady={noop} isExiting={false} isWarmup={true} />
-                </group>
-            </Suspense>
+            {/* 挂载顺序 = rooms.js 中 ROOMS 的声明顺序 */}
+            {ROOMS.map((room) => {
+                const RoomComponent = ROOM_COMPONENTS[room.id];
+                if (!RoomComponent || !room.warmupPosition) return null;
+
+                return (
+                    <Suspense key={room.id} fallback={null}>
+                        <group position={room.warmupPosition}>
+                            <RoomComponent showRoom={true} onReady={noop} isExiting={false} isWarmup={true} />
+                        </group>
+                    </Suspense>
+                );
+            })}
         </group>
     );
 };

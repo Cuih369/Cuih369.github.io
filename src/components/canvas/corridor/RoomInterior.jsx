@@ -3,11 +3,9 @@ import { Text } from '@react-three/drei';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Eagerly import room components - textures are preloaded during the preloader phase
-import GalleryRoom from '../rooms/Gallery/GalleryRoom';
-import StudioRoom from '../rooms/Studio/StudioRoom';
-import AboutRoom from '../rooms/About/AboutRoom';
-import ContactRoom from '../rooms/Contact/ContactRoom';
+// 房间组件映射（单一来源：roomRegistry.jsx）；标题与副标题来自房间注册表
+import { ROOM_COMPONENTS } from '../rooms/roomRegistry';
+import { ROOM_TITLES, ROOM_SUBTITLES, getRoomByLabel } from '../../../config/rooms';
 
 // Room configurations
 const ROOM_CONFIG = {
@@ -17,22 +15,6 @@ const ROOM_CONFIG = {
     roomWidth: 30,
     roomHeight: 20,
     roomDepth: 25
-};
-
-const SUBTITLES = {
-    'THE GALLERY': '探索我的创意项目',
-    'THE STUDIO': '观看幕后花絮',
-    'DEV DIARY': '我的开发之旅',
-    "LET'S CONNECT": '与我取得联系'
-};
-
-// 房间标题中文映射（label 作为内部标识符，此处映射为展示用中文标题）
-const TITLES = {
-    'THE GALLERY': '作品集',
-    'THE STUDIO': '工作室',
-    'THE ABOUT': '关于',
-    'DEV DIARY': '开发日记',
-    "LET'S CONNECT": '联系我'
 };
 
 // Naturalny kafelek listwy: 1582x94px przy wysokości 0.15 → ~2.524 units szerokości
@@ -129,14 +111,16 @@ const RoomInterior = memo(({ label, showRoom, onReady, isExiting }) => {
         roomBackWall: new THREE.PlaneGeometry(roomWidth, roomHeight)
     }), []);
 
-    const isGallery = label === 'THE GALLERY';
+    // 房间是否已在注册表登记（未登记则退回通用房间）
+    const room = getRoomByLabel(label);
+    const RoomComponent = room ? ROOM_COMPONENTS[room.id] : null;
 
     // Trigger onReady for generic rooms (which don't have their own component to do it)
     useEffect(() => {
-        if (showRoom && !['THE GALLERY', 'THE STUDIO', 'THE ABOUT', "LET'S CONNECT"].includes(label)) {
+        if (showRoom && !RoomComponent) {
             onReady?.();
         }
-    }, [showRoom, label, onReady]);
+    }, [showRoom, RoomComponent, onReady]);
 
     return (
         <group position={[0, -0.149, 0]}>
@@ -200,33 +184,11 @@ const RoomInterior = memo(({ label, showRoom, onReady, isExiting }) => {
             {/* === ROOM CONTENT === */}
             {showRoom && (
                 <group>
-                    {isGallery ? (
-                        // === NEW GALLERY ROOM ===
-                        // Positioned at the end of the corridor
+                    {RoomComponent ? (
+                        // === 注册表里的房间组件（统一挂在迷你走廊尽头，各房间内部自行处理偏移） ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <GalleryRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
-                            </Suspense>
-                        </group>
-                    ) : label === 'THE STUDIO' ? (
-                        // === NEW STUDIO ROOM ===
-                        <group position={[0, -0.5, -corridorDepth]}>
-                            <Suspense fallback={null}>
-                                <StudioRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
-                            </Suspense>
-                        </group>
-                    ) : label === 'THE ABOUT' ? (
-                        // === NEW ABOUT ROOM ===
-                        <group position={[0, -0.5, -corridorDepth]}>
-                            <Suspense fallback={null}>
-                                <AboutRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
-                            </Suspense>
-                        </group>
-                    ) : label === "LET'S CONNECT" ? (
-                        // === NEW CONTACT ROOM ===
-                        <group position={[0, -0.5, -corridorDepth]}>
-                            <Suspense fallback={null}>
-                                <ContactRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
+                                <RoomComponent showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : (
@@ -287,7 +249,7 @@ const RoomInterior = memo(({ label, showRoom, onReady, isExiting }) => {
                                 maxWidth={roomWidth * 0.8}
                                 textAlign="center"
                             >
-                                {TITLES[label] || label}
+                                {ROOM_TITLES[label] || label}
                             </Text>
 
                             {/* Subtitle */}
@@ -300,7 +262,7 @@ const RoomInterior = memo(({ label, showRoom, onReady, isExiting }) => {
                                 maxWidth={roomWidth * 0.7}
                                 textAlign="center"
                             >
-                                {SUBTITLES[label] || ''}
+                                {ROOM_SUBTITLES[label] || ''}
                             </Text>
 
                             {/* Lighting - WYLACZONE */}

@@ -9,6 +9,8 @@ import { useScene } from '../../../context/SceneContext';
 import { useAchievements } from '../../../context/AchievementsContext';
 import { useAudio } from '../../../context/AudioManager';
 import { isTouchDevice } from '../../../utils/deviceDetect';
+// 门板贴图 / 门牌文字 / 镜像规则全部来自房间注册表（单一数据源）
+import { DOOR_TEXTURES, DOOR_PAINTED_TEXTURES, getRoomByLabel } from '../../../config/rooms';
 
 // Constants from CorridorSegment
 const WALL_X_OUTER = 3.5;
@@ -38,23 +40,6 @@ const DOOR_LOOK_ANGLE = Math.PI * 0.334;
 // Camera X offset when aligning with door (adjust this to move camera left/right relative to door)
 // Higher value = further from door center horizontally
 const DOOR_ALIGN_X = 1.2;
-
-// Door texture mapping - maps label to texture file
-const DOOR_TEXTURES = {
-    'THE GALLERY': '/textures/corridor/doors/drzwiprojekty.webp',
-    'THE STUDIO': '/textures/corridor/doors/drzwisocial.webp',
-    'THE ABOUT': '/textures/corridor/doors/drzwiabout.webp',
-    "LET'S CONNECT": '/textures/corridor/doors/drzwikontakt.webp',
-};
-
-// Painted (colored) variants for brush-stroke reveal on hover
-const DOOR_PAINTED_TEXTURES = {
-    'THE GALLERY': '/textures/corridor/doors/drzwiprojekty_painted.webp',
-    'THE STUDIO': '/textures/corridor/doors/drzwisocial_painted.webp',
-    'THE ABOUT': '/textures/corridor/doors/drzwiabout_painted.webp',
-    "LET'S CONNECT": '/textures/corridor/doors/drzwikontakt_painted.webp',
-};
-
 
 /**
  * DoorSection Component
@@ -122,12 +107,8 @@ const DoorSection = ({
     const doorId = useMemo(() => {
         if (roomId) return roomId;
 
-        // Fallback for older code
-        if (label === 'THE GALLERY') return 'gallery';
-        if (label === 'THE STUDIO') return 'studio';
-        if (label === 'THE ABOUT') return 'about';
-        if (label === "LET'S CONNECT") return 'contact';
-        return null;
+        // 回退：按门牌 label 到房间注册表反查房间 id
+        return getRoomByLabel(label)?.id ?? null;
     }, [label, roomId]);
 
     // Listen for pending door click (auto-click after teleport)
@@ -251,7 +232,10 @@ const DoorSection = ({
     }, [baseboardTexture]);
 
     // Door dimensions - based on legacy texture aspect ratio (approx 0.376)
-    const doorRatio = label === 'THE STUDIO' ? 0.388 : 0.376;
+    const doorRatio = getRoomByLabel(label)?.corridor.doorRatio ?? 0.376;
+
+    // 门牌文字：从注册表读取（stacked = 两行 / single = 单行）
+    const doorSign = getRoomByLabel(label)?.corridor.sign ?? null;
     const doorHeight = 2.5;
     const doorWidth = doorHeight * doorRatio * 1.12;
 
@@ -1068,78 +1052,43 @@ const DoorSection = ({
                             />
                         </mesh>
 
-                        {/* === DYNAMIC TEXT FOR SIGNS === */}
-                        {label === 'THE GALLERY' && (
-                            <group position={[0, 0, 0.01]}>
+                        {/* === DYNAMIC TEXT FOR SIGNS（由房间注册表驱动） === */}
+                        {doorSign && (
+                            doorSign.layout === 'single' ? (
                                 <Text
                                     font="/fonts/CabinSketch-Bold.ttf"
-                                    fontSize={0.25}
+                                    fontSize={doorSign.fontSize}
                                     color="#111111"
                                     anchorX="center"
-                                    anchorY="bottom"
-                                    position={[0, -0.02, 0]}
+                                    anchorY="middle"
+                                    position={[0, 0, 0.01]}
                                 >
-                                    作品
+                                    {doorSign.text}
                                 </Text>
-                                <Text
-                                    font="/fonts/CabinSketch-Bold.ttf"
-                                    fontSize={0.25}
-                                    color="#111111"
-                                    anchorX="center"
-                                    anchorY="top"
-                                    position={[0, +0.02, 0]}
-                                >
-                                    集厅
-                                </Text>
-                            </group>
-                        )}
-                        {label === 'THE STUDIO' && (
-                            <group position={[0, 0, 0.01]}>
-                                <Text
-                                    font="/fonts/CabinSketch-Bold.ttf"
-                                    fontSize={0.25}
-                                    color="#111111"
-                                    anchorX="center"
-                                    anchorY="bottom"
-                                    position={[0, -0.02, 0]}
-                                >
-                                    我的
-                                </Text>
-                                <Text
-                                    font="/fonts/CabinSketch-Bold.ttf"
-                                    fontSize={0.25}
-                                    color="#111111"
-                                    anchorX="center"
-                                    anchorY="top"
-                                    position={[0, +0.03, 0]}
-                                >
-                                    工作室
-                                </Text>
-                            </group>
-                        )}
-                        {label === 'THE ABOUT' && (
-                            <Text
-                                font="/fonts/CabinSketch-Bold.ttf"
-                                fontSize={0.30}
-                                color="#111111"
-                                anchorX="center"
-                                anchorY="middle"
-                                position={[0, 0, 0.01]}
-                            >
-                                关于
-                            </Text>
-                        )}
-                        {label === "LET'S CONNECT" && (
-                            <Text
-                                font="/fonts/CabinSketch-Bold.ttf"
-                                fontSize={0.25}
-                                color="#111111"
-                                anchorX="center"
-                                anchorY="middle"
-                                position={[0, 0, 0.01]}
-                            >
-                                联系
-                            </Text>
+                            ) : (
+                                <group position={[0, 0, 0.01]}>
+                                    <Text
+                                        font="/fonts/CabinSketch-Bold.ttf"
+                                        fontSize={doorSign.fontSize}
+                                        color="#111111"
+                                        anchorX="center"
+                                        anchorY="bottom"
+                                        position={[0, doorSign.lineOffsets[0], 0]}
+                                    >
+                                        {doorSign.lines[0]}
+                                    </Text>
+                                    <Text
+                                        font="/fonts/CabinSketch-Bold.ttf"
+                                        fontSize={doorSign.fontSize}
+                                        color="#111111"
+                                        anchorX="center"
+                                        anchorY="top"
+                                        position={[0, doorSign.lineOffsets[1], 0]}
+                                    >
+                                        {doorSign.lines[1]}
+                                    </Text>
+                                </group>
+                            )
                         )}
                     </group>
 
@@ -1182,7 +1131,7 @@ const DoorSection = ({
                         <mesh
                             ref={doorPaintedRef}
                             position={[doorMeshX, -0.2, -0.001]}
-                            scale={[(side === 'right' && label !== 'THE STUDIO') ? -1 : 1, 1, 1]}
+                            scale={[(side === 'right' && (getRoomByLabel(label)?.corridor.mirrorDoorOnRight ?? true)) ? -1 : 1, 1, 1]}
                         >
                             <planeGeometry args={[doorWidth, doorHeight]} />
                             <meshBasicMaterial color="#e0e0e0"
@@ -1196,7 +1145,7 @@ const DoorSection = ({
                         {/* Sketch overlay (front) - brush-stroke discard reveals painted beneath */}
                         <mesh
                             position={[doorMeshX, -0.2, 0]}
-                            scale={[(side === 'right' && label !== 'THE STUDIO') ? -1 : 1, 1, 1]}
+                            scale={[(side === 'right' && (getRoomByLabel(label)?.corridor.mirrorDoorOnRight ?? true)) ? -1 : 1, 1, 1]}
                         >
                             <planeGeometry args={[doorWidth, doorHeight]} />
                             <revealMaterial color="#e0e0e0"

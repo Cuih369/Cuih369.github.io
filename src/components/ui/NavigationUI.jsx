@@ -7,15 +7,7 @@ import { useAchievements } from '../../context/AchievementsContext';
 import AchievementPopup from './AchievementPopup';
 import AchievementsPanel from './AchievementsPanel';
 import '../../styles/NavigationUI.scss';
-
-// Room data for the map - positions are percentages on the map image
-// These positions correspond to the visual elements on the map
-const ROOMS = [
-    { id: 'about', label: '关于', x: 43, y: 38 },      // Paper airplane (left side)
-    { id: 'gallery', label: '作品集', x: 43, y: 72 },  // City buildings (bottom left)
-    { id: 'contact', label: '联系', x: 57, y: 25 },  // Pier/dock (top right)
-    { id: 'studio', label: '工作室', x: 57, y: 55 },    // Monitors stack (right side)
-];
+import { ROOMS, MAP_PIN_ROOMS } from '../../config/rooms';
 
 // Pin starting position - the dashed circle at the bottom of the tower
 const PIN_START_POSITION = { x: 50.5, y: 97 };
@@ -51,61 +43,22 @@ const NavigationUI = () => {
         return () => window.removeEventListener('inspectChange', handleInspectChange);
     }, []);
 
-    const paintedMapsRefs = {
-        about: useRef(),
-        gallery: useRef(),
-        contact: useRef(),
-        studio: useRef()
-    };
+    // 每个房间的彩色地图叠加层（key = 房间 id，来自房间注册表）
+    const paintedMapsRefs = useRef({});
 
     useEffect(() => {
-        // About (zone: left 10%, top 20%, width 30%, height 35%)
-        // -> X: 10% to 40%, Y: 20% to 55%
-        if (paintedMapsRefs.about.current) {
-            gsap.to(paintedMapsRefs.about.current, {
-                clipPath: (hoveredRoom === 'about' || currentRoom === 'about')
-                    ? 'polygon(10% 20%, 40% 20%, 40% 55%, 10% 55%)'
-                    : 'polygon(10% 20%, 10% 20%, 10% 55%, 10% 55%)',
-                duration: 0.5,
-                ease: "power2.out"
-            });
-        }
+        // 彩色地图叠加层：按房间注册表逐个做 clip-path 展开/收起
+        ROOMS.forEach((room) => {
+            const el = paintedMapsRefs.current[room.id];
+            if (!el) return;
 
-        // Gallery (zone: left 10%, bottom 8%, width 30%, height 35%)
-        // -> X: 10% to 40%, Y: 57% to 92% (since bottom=8% means top is 100-8-35=57%)
-        if (paintedMapsRefs.gallery.current) {
-            gsap.to(paintedMapsRefs.gallery.current, {
-                clipPath: (hoveredRoom === 'gallery' || currentRoom === 'gallery')
-                    ? 'polygon(10% 57%, 40% 57%, 40% 92%, 10% 92%)'
-                    : 'polygon(10% 57%, 10% 57%, 10% 92%, 10% 92%)',
+            const isActive = hoveredRoom === room.id || currentRoom === room.id;
+            gsap.to(el, {
+                clipPath: isActive ? room.map.clipExpanded : room.map.clipCollapsed,
                 duration: 0.5,
                 ease: "power2.out"
             });
-        }
-
-        // Contact (zone: right 5%, top 10%, width 35%, height 25%)
-        // -> X: 60% to 95% (since right=5% means left is 100-5-35=60%), Y: 10% to 35%
-        if (paintedMapsRefs.contact.current) {
-            gsap.to(paintedMapsRefs.contact.current, {
-                clipPath: (hoveredRoom === 'contact' || currentRoom === 'contact')
-                    ? 'polygon(60% 10%, 95% 10%, 95% 35%, 60% 35%)'
-                    : 'polygon(95% 10%, 95% 10%, 95% 35%, 95% 35%)',
-                duration: 0.5,
-                ease: "power2.out"
-            });
-        }
-
-        // Studio (zone: right 15%, bottom 19%, width 25%, height 40%)
-        // -> X: 60% to 85% (since right=15% means left is 100-15-25=60%), Y: 41% to 81% (since bottom=19% means top is 100-19-40=41%)
-        if (paintedMapsRefs.studio.current) {
-            gsap.to(paintedMapsRefs.studio.current, {
-                clipPath: (hoveredRoom === 'studio' || currentRoom === 'studio')
-                    ? 'polygon(60% 41%, 85% 41%, 85% 81%, 60% 81%)'
-                    : 'polygon(85% 41%, 85% 41%, 85% 81%, 85% 81%)',
-                duration: 0.5,
-                ease: "power2.out"
-            });
-        }
+        });
     }, [hoveredRoom, currentRoom]);
 
     useEffect(() => {
@@ -333,62 +286,47 @@ const NavigationUI = () => {
                             {/* Map background image */}
                             <img src="/images/map.webp" alt="作品集地图" className="map-image" />
 
-                            {/* Painted Map Overlays */}
-                            <img ref={paintedMapsRefs.about} src="/images/map_about_painted.webp" alt="" className="painted-map-layer" style={{ clipPath: 'polygon(10% 20%, 10% 20%, 10% 55%, 10% 55%)' }} />
-                            <img ref={paintedMapsRefs.gallery} src="/images/map_gallery_painted.webp" alt="" className="painted-map-layer" style={{ clipPath: 'polygon(10% 57%, 10% 57%, 10% 92%, 10% 92%)' }} />
-                            <img ref={paintedMapsRefs.contact} src="/images/map_contact_painted.webp" alt="" className="painted-map-layer" style={{ clipPath: 'polygon(95% 10%, 95% 10%, 95% 35%, 95% 35%)' }} />
-                            <img ref={paintedMapsRefs.studio} src="/images/map_studio_painted.webp" alt="" className="painted-map-layer" style={{ clipPath: 'polygon(85% 41%, 85% 41%, 85% 81%, 85% 81%)' }} />
+                            {/* Painted Map Overlays（来自房间注册表） */}
+                            {ROOMS.map((room) => (
+                                <img
+                                    key={room.id}
+                                    ref={(el) => { paintedMapsRefs.current[room.id] = el; }}
+                                    src={room.map.paintedLayer}
+                                    alt=""
+                                    className="painted-map-layer"
+                                    style={{ clipPath: room.map.clipCollapsed }}
+                                />
+                            ))}
 
-                            {/* Hover Zones — 4 quadrants covering the map */}
-                            <button
-                                type="button"
-                                className="map-hover-zone zone-about"
-                                onMouseEnter={() => setHoveredRoom('about')}
-                                onMouseLeave={() => setHoveredRoom(null)}
-                                onFocus={() => setHoveredRoom('about')}
-                                onBlur={() => setHoveredRoom(null)}
-                                onClick={() => handleRoomClick('about')}
-                                aria-label="传送至关于房间"
-                            />
-                            <button
-                                type="button"
-                                className="map-hover-zone zone-gallery"
-                                onMouseEnter={() => setHoveredRoom('gallery')}
-                                onMouseLeave={() => setHoveredRoom(null)}
-                                onFocus={() => setHoveredRoom('gallery')}
-                                onBlur={() => setHoveredRoom(null)}
-                                onClick={() => handleRoomClick('gallery')}
-                                aria-label="传送至作品集房间"
-                            />
-                            <button
-                                type="button"
-                                className="map-hover-zone zone-contact"
-                                onMouseEnter={() => setHoveredRoom('contact')}
-                                onMouseLeave={() => setHoveredRoom(null)}
-                                onFocus={() => setHoveredRoom('contact')}
-                                onBlur={() => setHoveredRoom(null)}
-                                onClick={() => handleRoomClick('contact')}
-                                aria-label="传送至联系房间"
-                            />
-                            <button
-                                type="button"
-                                className="map-hover-zone zone-studio"
-                                onMouseEnter={() => setHoveredRoom('studio')}
-                                onMouseLeave={() => setHoveredRoom(null)}
-                                onFocus={() => setHoveredRoom('studio')}
-                                onBlur={() => setHoveredRoom(null)}
-                                onClick={() => handleRoomClick('studio')}
-                                aria-label="传送至工作室房间"
-                            />
+                            {/* Hover Zones：热区几何来自房间注册表（新房间无需再改 SCSS） */}
+                            {ROOMS.map((room) => (
+                                <button
+                                    key={room.id}
+                                    type="button"
+                                    className="map-hover-zone"
+                                    style={room.map.zone}
+                                    onMouseEnter={() => setHoveredRoom(room.id)}
+                                    onMouseLeave={() => setHoveredRoom(null)}
+                                    onFocus={() => setHoveredRoom(room.id)}
+                                    onBlur={() => setHoveredRoom(null)}
+                                    onClick={() => handleRoomClick(room.id)}
+                                    aria-label={`传送至${room.sr.name}房间`}
+                                />
+                            ))}
 
                             {/* Permanent Map Text Labels */}
-                            <div className="map-room-label about">关于</div>
-                            <div className="map-room-label gallery">作品集</div>
-                            <div className="map-room-label contact">联系</div>
-                            <div className="map-room-label studio">工作室</div>
-
-                            {/* Pin slot markers - 4 locations */}
                             {ROOMS.map((room) => (
+                                <div
+                                    key={room.id}
+                                    className="map-room-label"
+                                    style={room.map.label}
+                                >
+                                    {room.sr.name}
+                                </div>
+                            ))}
+
+                            {/* Pin slot markers - 4 locations（来自房间注册表） */}
+                            {MAP_PIN_ROOMS.map((room) => (
                                 <button
                                     key={room.id}
                                     className={`pin-slot ${currentRoom === room.id ? 'active' : ''} ${hoveredRoom === room.id ? 'hovered' : ''}`}

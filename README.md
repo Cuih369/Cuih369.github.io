@@ -1,95 +1,79 @@
-# 🎨 ITom Dev | Interactive 3D WebGL Portfolio
+# 个人博客 · 交互式 3D WebGL 前端
 
-<div align="center">
-  <img src="https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react" alt="React" />
-  <img src="https://img.shields.io/badge/Three.js-0.182-black?style=for-the-badge&logo=threedotjs" alt="Three.js" />
-  <img src="https://img.shields.io/badge/R3F-9.4-purple?style=for-the-badge&logo=react" alt="React Three Fiber" />
-  <img src="https://img.shields.io/badge/GSAP-3.14-green?style=for-the-badge&logo=greensock" alt="GSAP" />
-  <img src="https://img.shields.io/badge/Vite-7.2-646CFF?style=for-the-badge&logo=vite" alt="Vite" />
-</div>
+> 从 [ITomPoland/portfolio-itom](https://github.com/ITomPoland/portfolio-itom) 派生改造而成的个人博客项目。
+> 改造方向：整站中文本地化 + 房间注册表化（数据驱动）+ 博客内容接入。
+> 架构说明见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 
-<br/>
+一个沉浸式 3D 网站：用户从门口进入，穿过一条无限延伸的手绘走廊，走廊两侧的门分别通往不同「房间」（栏目）。
+整体视觉为手绘黑白速写风格。
 
-Welcome to the open-source repository of **Tomasz "ITom" Szmajda's** interactive 3D Web Developer portfolio. This project pushes the limits of modern web technologies by blending spatial WebGL computing, complex React ecosystems, and highly optimized frontend engineering.
+## 房间（栏目）
 
-> [!NOTE]
-> Ensure hardware acceleration is enabled in your browser settings to experience the smooth 60 FPS high-tier rendering of this application.
+| 房间 | 路由 | 内容形态 |
+|------|------|----------|
+| 作品集 The Gallery | `/gallery` | 晾衣绳上挂着手绘项目卡片，点击可翻转查看 |
+| 工作室 The Studio | `/studio` | 无限堆叠的悬浮显示器（YouTube / 博客 / TikTok 等内容） |
+| 关于 The About | `/about` | 在云层中飞行，途中经过奖项、里程碑与技术气球 |
+| 联系 Let's Connect | `/contact` | 码头场景，漂浮木桶承载社交链接，另有一张可填写的信纸表单 |
 
-## 🚀 Key Performance Architectures (2026 Standards)
+## 技术栈
 
-This application is strictly optimized for cross-device operability, achieving zero lag spikes even on mobile processors through several bespoke architectural implementations:
+- **React 19** + **React Three Fiber 9**（Three.js 0.182）负责 3D 渲染
+- **@react-three/drei** 提供 `Text` / `useTexture` / `Html` 等辅助组件
+- **GSAP** 负责相机与界面动画
+- **Vite 7** 构建，**SCSS** 样式，**vite-plugin-compression** 产出压缩资源
+- **Sanity** 作为内容源（Headless CMS），构建期通过 `seo-plugin.js` 拉取内容生成 SEO DOM 与 JSON-LD
+- **PostHog** 埋点，**Web3Forms** 承载联系表单提交
 
-1. **Invisible Semantic SEO Fallback:** Bypasses WebGL canvas SEO limitations via strategic `sr-only-seo` indexing DOM injections, rendering fully visible semantic trees to native search-engine crawlers without mounting heavy bundles.
-2. **Asynchronous Shader Compilation:** Enforces `gl.compileAsync` during the Preloading phase inside a hidden `RoomWarmup` Suspense boundary. This allows Three.js to pre-compile complex materials asynchronously without blocking the main React update thread.
-3. **Baked Global Tinting & Lighing Extraction:** Replaced real-time WebGL shadow maps and infinite light rays with baked-in global textures (`apply_global_tint.js`), dropping the GPU compute overhead entirely while maintaining visual depth.
-4. **DOM Mutation Bypassing:** Critical animation properties (like SVG preloader states tracking 130+ concurrent HTTP texture requests) write directly to the `ref.current.style`, intentionally bypassing React’s `setState` render cycles to conserve CPU.
-5. **Adaptive Device Tiering:** Auto-detects `navigator.deviceMemory`, hardware concurrency, and viewport sizes to scale WebGL resolutions (`dpr`), antialiasing algorithms, and texture loading strictness on the fly.
+## 本地开发
 
----
+需要 Node.js 20+。
 
-## 🏗️ 3D Scene Architecture
-
-```mermaid
-graph TD;
-    A[App.jsx] --> B[SceneProvider Context];
-    A --> C[canvas];
-    A --> D[2D DOM / SEO / HUD];
-    
-    C --> E[Experience.jsx];
-    E --> F[RoomWarmup Pre-compiler];
-    E --> G[Infinite Corridor Manager];
-    
-    G --> H[Gallery Room];
-    G --> I[Studio Room];
-    G --> J[Contact Room];
-    G --> K[About Room];
-    
-    H -.-> L{useTexture & useGLTF};
-    L -.-> M(GPU Memory);
+```bash
+npm install
+npm run dev        # 开发服务器，默认 http://localhost:5173
+npm run build      # 生产构建
+npm run preview    # 预览构建产物（性能测试请用这个，不要用 dev）
+npm run lint       # ESLint
 ```
 
----
+> 项目包含数百张高分辨率纹理（`public/textures` 约 86 MB），dev 环境首次加载会偏慢属正常现象。
 
-## 🛠️ Local Development Setup
+## 目录结构
 
-To run this application natively on your local machine:
+```
+src/
+├── components/
+│   ├── canvas/            # 全部 3D 内容
+│   │   ├── corridor/      # 走廊：分段、门、房间内景、传送
+│   │   ├── entrance/      # 进门体验
+│   │   ├── rooms/         # 四个房间内部 + roomRegistry.jsx（房间组件映射）
+│   │   └── shaders/       # 自定义着色器材质
+│   ├── dom/               # 2D 覆盖层（Preloader、纸张转场）
+│   └── ui/                # 导航、地图、成就、音频控件、无障碍层
+├── config/
+│   ├── rooms.js           # ★ 房间注册表：走廊门 / 门牌 / 标题 / 传送坐标 / 地图 / 路由与 SEO 的唯一数据源
+│   ├── sanity.js          # Sanity 客户端配置
+│   └── texturePreloadList.js
+├── context/               # SceneContext（全局状态机）、音频、成就、性能分级
+├── hooks/                 # 相机、Sanity 数据、文档元信息
+└── styles/                # SCSS（按组件拆分 + 基础变量/混入）
+public/                    # 纹理、字体、音效、地图、robots.txt、sitemap.xml、_headers、_redirects
+functions/                 # Cloudflare Pages Functions（Sanity CDN 代理）
+portfolio-itom/            # 独立的 Sanity Studio（在它自己的目录里 npm install / npm run dev）
+```
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/ITomPoland/portfolio-itom.git
-   cd portfolio-itom
-   ```
+## 新增一个房间
 
-2. **Install dependencies:**
-   Make sure you are on Node.js v20+.
-   ```bash
-   npm install
-   ```
+1. 在 `src/config/rooms.js` 的 `ROOMS` 数组里加一项（走廊位置、门牌文字、标题、地图引脚、路由与 SEO 元信息）。
+2. 在 `src/components/canvas/rooms/roomRegistry.jsx` 里注册对应的房间组件。
+3. 从 `ROOMS` 派生的门、门牌、标题、传送坐标、相机瞥视、地图热区/引脚、虚拟路由、屏幕阅读器导航、`sitemap.xml` 都会自动跟上。
 
-3. **Start the local Dev Server:**
-   ```bash
-   npm run dev
-   ```
+> `public/sitemap.xml`、`index.html` 的静态 SEO 片段属于静态文件，新增房间时需要手动同步。
 
-> [!IMPORTANT]
-> Since this project heavily utilizes `vite-plugin-compression` and hundreds of high-res textures, your initial local load might take a few seconds as the dev-server buffers asset delivery. For performance testing, always run `npm run build && npm run preview`.
+## 与上游的关系
 
-## 🤝 Contributing & Feedback
-
-All PRs improving the shader physics, 3D math logic, or component memoization runtimes are welcome. Please refer to our new `.github` Issue and Pull Request templates when submitting!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingRoom`)
-
-
-## License
-
-The code in this repository is licensed under the [MIT License](LICENSE). 
-**Note:** All personal assets, 3D textures, images, and copywriting are copyright of Tomasz Szmajda and may not be reused or reproduced without explicit permission.
-3. Commit your Changes (`git commit -m 'feat: Added realistic liquid simulation to Contact Room'`)
-4. Push to the Branch (`git push origin feature/AmazingRoom`)
-5. Open a Pull Request
-
----
-
-*Designed and Developed by [Tomasz Szmajda (ITom Dev)](https://itomdev.com).*
+- 代码以 **MIT 许可**发布，原始版权归 **Tomasz Szmajda**（见 [`LICENSE`](LICENSE)）。
+- ⚠️ 上游明确声明：**个人素材、3D 纹理、图片与文案版权归 Tomasz Szmajda 所有，未经授权不得复用**。若本项目要长期公开发布，请替换这些素材。
+- 上游仓库地址：https://github.com/ITomPoland/portfolio-itom
+- 待替换项：`index.html`、`public/sitemap.xml`、`src/hooks/useDocumentMeta.js`、`seo-plugin.js` 中的站点域名 `https://itomdev.com` 仍是原作者的域名。
