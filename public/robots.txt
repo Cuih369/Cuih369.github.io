@@ -22,4 +22,5 @@ Allow: /
 User-agent: Meta-ExternalAgent
 Allow: /
 
-Sitemap: https://itomdev.com/sitemap.xml
+# 部署前把下面域名换成你的正式域名（与 src/config/site.js 的 SITE_URL 一致）
+Sitemap: https://example.com/sitemap.xml

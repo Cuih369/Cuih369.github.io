@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text, PositionalAudio } from '@react-three/drei';
+import { PositionalAudio } from '@react-three/drei';
+import { Text } from '../../text/Text';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import MessagePaper from './MessagePaper';
@@ -9,6 +10,7 @@ import { useScene } from '../../../../context/SceneContext';
 import GalleryClouds from '../Gallery/GalleryClouds';
 import { useAchievements } from '../../../../context/AchievementsContext';
 import { useAudio } from '../../../../context/AudioManager';
+import { socialUrl } from '../../../../config/site';
 
 // ============================================
 // ============================================
@@ -356,6 +358,15 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    // 水面上的社交木桶：位置固定，链接取自 src/config/site.js 的 SOCIAL_URLS。
+    // 在 SOCIAL_URLS 里留空的平台不会渲染（填上链接即自动出现）。
+    const SOCIAL_BARRELS = [
+        { id: 'linkedin', label: '领英', position: isMobile ? [-1.2, 0.5, -10] : [-3, 0.5, -10], rotation: [0, 0.2, 0] },
+        { id: 'github', label: 'GitHub', position: isMobile ? [-1.5, -0.3, -7] : [-5, -0.3, -8], rotation: [0, 0.3, 0] },
+        { id: 'facebook', label: '脸书', position: isMobile ? [1.2, 0.5, -10] : [3, 0.5, -10], rotation: [0, -0.2, 0] },
+        { id: 'instagram', label: 'Instagram', position: isMobile ? [1.5, -0.3, -7] : [5, -0.3, -8], rotation: [0, -0.3, 0] },
+    ];
+
     return (
         <group ref={groupRef} position={[0, -0.7, -5]}>
             {!isWarmup && (
@@ -398,46 +409,24 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             </group>
 
             {/* 🛢️ SOCIAL BARRELS (Floating in water) */}
-            {/* LINKEDIN */}
-            <SocialBarrel
-                position={isMobile ? [-1.2, 0.5, -10] : [-3, 0.5, -10]}
-                rotation={[0, 0.2, 0]}
-                texturePath="/textures/contact/beczka.webp"
-                label="领英"
-                onClick={() => window.open('https://www.linkedin.com/in/tomasz-szmajda-259337305/', '_blank')}
-                paintOnBeforeCompile={onBeforeCompile}
-                paintUniforms={uniformsData}
-            />
-            {/* GITHUB */}
-            <SocialBarrel
-                position={isMobile ? [-1.5, -0.3, -7] : [-5, -0.3, -8]}
-                rotation={[0, 0.3, 0]}
-                texturePath="/textures/contact/beczka.webp"
-                label="GitHub"
-                onClick={() => window.open('https://github.com/ITomPoland', '_blank')}
-                paintOnBeforeCompile={onBeforeCompile}
-                paintUniforms={uniformsData}
-            />
-            {/* FACEBOOK */}
-            <SocialBarrel
-                position={isMobile ? [1.2, 0.5, -10] : [3, 0.5, -10]}
-                rotation={[0, -0.2, 0]}
-                texturePath="/textures/contact/beczka.webp"
-                label="脸书"
-                onClick={() => window.open('https://www.facebook.com/people/ITom/61586563487664/', '_blank')}
-                paintOnBeforeCompile={onBeforeCompile}
-                paintUniforms={uniformsData}
-            />
-            {/* INSTAGRAM */}
-            <SocialBarrel
-                position={isMobile ? [1.5, -0.3, -7] : [5, -0.3, -8]}
-                rotation={[0, -0.3, 0]}
-                texturePath="/textures/contact/beczka.webp"
-                label="Instagram"
-                onClick={() => window.open('https://www.instagram.com/itom.dev/', '_blank')}
-                paintOnBeforeCompile={onBeforeCompile}
-                paintUniforms={uniformsData}
-            />
+            {/* 链接来自 src/config/site.js → SOCIAL_URLS；留空（''）的平台不渲染 */}
+            {SOCIAL_BARRELS.map(({ id, label, position, rotation }) => {
+                const url = socialUrl(id);
+                if (!url) return null;
+                return (
+                    <SocialBarrel
+                        key={id}
+                        position={position}
+                        rotation={rotation}
+                        texturePath="/textures/contact/beczka.webp"
+                        label={label}
+                        onClick={() => window.open(url, '_blank')}
+                        paintOnBeforeCompile={onBeforeCompile}
+                        paintUniforms={uniformsData}
+                    />
+                );
+            })}
+
             {/* MAIL (Triggers animation) */}
             <SocialBarrel
                 position={isMobile ? [0, -0.7, -6] : [0, -0.7, -7]}

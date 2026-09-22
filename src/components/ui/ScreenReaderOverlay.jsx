@@ -2,6 +2,7 @@ import { useScene } from '../../context/SceneContext';
 import { useGalleryProjects, useStudioContent, useAwards } from '../../hooks/useSanityData';
 import '../../styles/ScreenReaderOverlay.scss';
 import { ROOMS, getRoomById } from '../../config/rooms';
+import { AUTHOR_NAME, SITE_NAME } from '../../config/site';
 
 // 平台标识 → 展示名称映射（供屏幕阅读器与爬虫读取）
 const PLATFORM_LABELS = {
@@ -38,11 +39,11 @@ const ScreenReaderOverlay = () => {
 
             {/* Main accessible navigation */}
             <nav id="sr-main-nav" className="sr-only" aria-label="作品集房间">
-                <h1>ITom — 创意开发者作品集</h1>
+                <h1>{AUTHOR_NAME} — {SITE_NAME}</h1>
                 <h2>作品集导航</h2>
 
                 {!hasEntered && (
-                    <p>欢迎来到 ITom 的交互式 3D 作品集。点击门或按 Enter 键进入。</p>
+                    <p>欢迎来到 {AUTHOR_NAME} 的交互式 3D 博客。点击门或按 Enter 键进入。</p>
                 )}
 
                 {hasEntered && !isInRoom && (

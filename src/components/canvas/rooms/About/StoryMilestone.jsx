@@ -1,6 +1,6 @@
 import { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Text } from '../../text/Text';
 import * as THREE from 'three';
 
 // Reusable Vector3 to avoid allocations in useFrame

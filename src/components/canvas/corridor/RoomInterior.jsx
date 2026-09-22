@@ -1,5 +1,5 @@
 import { useMemo, memo, Suspense, useEffect } from 'react';
-import { Text } from '@react-three/drei';
+import { Text } from '../text/Text';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 

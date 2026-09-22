@@ -1,6 +1,7 @@
 import { useRef, useState, useMemo, useEffect, forwardRef, useImperativeHandle, memo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text, useTexture, Float, PositionalAudio } from '@react-three/drei';
+import { useTexture, Float, PositionalAudio } from '@react-three/drei';
+import { Text } from '../../text/Text';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { Observer } from 'gsap/all';
@@ -33,7 +34,8 @@ export const GALLERY_INTERACTION_AUDIO_SETTINGS = {
     rolloff: 2        // How fast the sound fades away (exponential)
 };
 
-// Define the unique projects and their textures
+// ⚠️ 示例项目（占位）：下面是上游作者的作品与外链，正式使用前请替换成你自己的项目。
+//    Sanity（galleryProject）有数据时不会用到这份回退数据。
 const FALLBACK_PROJECTS = [
     {
         id: 'monetune',

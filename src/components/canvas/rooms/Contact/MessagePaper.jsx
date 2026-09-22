@@ -1,8 +1,10 @@
 /* eslint-disable react/no-unknown-property */
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Text, useTexture, Html, useCursor } from '@react-three/drei';
+import { useTexture, Html, useCursor } from '@react-three/drei';
+import { Text } from '../../text/Text';
 import * as THREE from 'three';
+import { SITE_URL } from '../../../../config/site';
 
 const PAPER_WIDTH = 1.51; // Legacy ratio 1197/1340
 const PAPER_HEIGHT = 1.7;
@@ -150,13 +152,25 @@ const SmoothButton = ({ texture, onClick, position, size, text, fontPath }) => {
 // Set VITE_WEB3FORMS_KEY in .env (local dev) and in Cloudflare Pages dashboard (production).
 const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || '';
 
-// Only these domains are allowed to submit the form.
-// Anyone cloning the repo and running on localhost will be silently blocked.
+// 允许提交表单的域名白名单（防止别人克隆仓库后盗用你的 Web3Forms key）。
+// 站点域名来自 src/config/site.js；本地开发（localhost / 127.0.0.1）始终放行。
+// 需要额外放行预览域名时，设置环境变量 VITE_EXTRA_ALLOWED_ORIGINS（逗号分隔）。
+const siteHost = (() => {
+    try {
+        return new URL(SITE_URL).hostname;
+    } catch {
+        return '';
+    }
+})();
+
 const ALLOWED_ORIGINS = [
-    'itomdev.com',
-    'www.itomdev.com',
-    'portfolio-itom.pages.dev',
-];
+    siteHost,
+    siteHost.startsWith('www.') ? siteHost.slice(4) : `www.${siteHost}`,
+    ...(import.meta.env.VITE_EXTRA_ALLOWED_ORIGINS || '')
+        .split(',')
+        .map((host) => host.trim())
+        .filter(Boolean),
+].filter(Boolean);
 
 // ═══════════════════════════════════════════════════════════════════════
 // 2026 Advanced Anti-Spam System
@@ -399,7 +413,8 @@ const MessagePaper = ({ position = [0, 0.05, 2], onSend }) => {
             // --- 0c. Origin / Domain Lock ---
             // Block submissions from cloned repos running on unauthorized domains
             const currentHost = window.location.hostname;
-            const isAllowedOrigin = ALLOWED_ORIGINS.some(d => currentHost === d || currentHost.endsWith('.' + d));
+            const isLocalDev = currentHost === 'localhost' || currentHost === '127.0.0.1' || currentHost === '[::1]';
+            const isAllowedOrigin = isLocalDev || ALLOWED_ORIGINS.some(d => currentHost === d || currentHost.endsWith('.' + d));
             if (!isAllowedOrigin) {
                 // Silently fake success so attacker thinks it worked
                 setSubmitStatus('success');

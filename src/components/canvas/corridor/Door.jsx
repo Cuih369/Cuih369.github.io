@@ -1,6 +1,8 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text, Plane, useTexture } from '@react-three/drei';
+import { Plane, useTexture } from '@react-three/drei';
+import { Text } from '../text/Text';
+import { CJK_FONT_URL, HAND_BOLD_FONT_URL } from '../../../config/fonts';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { PositionalAudio } from '@react-three/drei';
@@ -178,11 +180,12 @@ const Door = ({
                     <meshBasicMaterial color="#e0e0e0" />
                 </mesh>
 
-                {/* Label text (front layer) */}
+                {/* Label text (front layer) - 手写体本地字体（不依赖网络） */}
                 <Text
                     position={[0, 0, 0.01]}
                     fontSize={0.12}
                     color="#1a1a1a"
+                    font={HAND_BOLD_FONT_URL}
                     anchorX="center"
                     anchorY="middle"
                     renderOrder={3}
@@ -191,11 +194,12 @@ const Door = ({
                     {icon} {label}
                 </Text>
 
-                {/* Arrow pointing down */}
+                {/* Arrow pointing down - 中文字体自带 ▼ 字形，本地可用 */}
                 <Text
                     position={[0, -0.2, 0.01]}
                     fontSize={0.15}
                     color="#39FF14"
+                    font={CJK_FONT_URL}
                     anchorX="center"
                     renderOrder={3}
                     depthOffset={-1}

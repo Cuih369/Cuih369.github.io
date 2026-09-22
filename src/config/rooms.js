@@ -11,6 +11,8 @@
  * 因为构建期的脚本（Node 环境）也需要能安全地读取它。
  */
 
+import { titleWithSite } from './site.js';
+
 export const ROOMS = [
     // ⚠️ 数组顺序 = 走廊门从起点向后的生成顺序（按 corridor.relativeZ 排列），
     //    也是 RoomWarmup 的预热挂载顺序。调整顺序会改变门的生成次序，请谨慎。
@@ -56,13 +58,13 @@ export const ROOMS = [
 
         // ── 路由与 SEO（useDocumentMeta）──
         path: '/gallery',
+
         meta: {
-            title: '作品集与项目 — ITom 作品集',
-            description: '浏览 ITom 的交互式 3D 网页开发项目作品集。每个项目都以手绘卡片的形式展示，可翻转探索。',
+            title: titleWithSite('作品集与项目'),
+            description: '浏览我的 3D 项目作品集：每个项目都以手绘卡片呈现，可翻转探索。',
         },
 
-        // ── 屏幕阅读器 / 无障碍（ScreenReaderOverlay）──
-        sr: { name: '作品集', hint: '我的项目和作品' },
+                sr: { name: '作品集', hint: '我的项目和作品' },
     },
     {
         id: 'studio',
@@ -101,12 +103,13 @@ export const ROOMS = [
         },
 
         path: '/studio',
+
         meta: {
-            title: '工作室 — ITom 作品集',
-            description: '探索 ITom 的内容工作室 — 在沉浸式 3D 空间中通过悬浮显示器观看 YouTube 视频、博客文章和 TikTok。',
+            title: titleWithSite('工作室'),
+            description: '在沉浸式 3D 空间中通过悬浮显示器浏览我的内容：视频、文章与短视频。',
         },
 
-        sr: { name: '工作室', hint: '技术和经验' },
+                sr: { name: '工作室', hint: '技术和经验' },
     },
     {
         id: 'about',
@@ -145,12 +148,13 @@ export const ROOMS = [
         },
 
         path: '/about',
+
         meta: {
-            title: '关于我 — ITom 作品集',
-            description: '了解 Tomasz "ITom" Szmajda — 一位专注于 3D 网页体验、React、Three.js 和 GSAP 动画的创意前端开发者。',
+            title: titleWithSite('关于我'),
+            description: '我的故事、里程碑与技能，以交互式 3D 云层场景呈现。',
         },
 
-        sr: { name: '关于', hint: '我的故事、技能和经历' },
+                sr: { name: '关于', hint: '我的故事、技能和经历' },
     },
     {
         id: 'contact',
@@ -188,12 +192,13 @@ export const ROOMS = [
         },
 
         path: '/contact',
+
         meta: {
-            title: '联系方式 — ITom 作品集',
-            description: '与 Tomasz "ITom" Szmajda 取得联系。在这个交互式 3D 联系房间中找到社交媒体链接和联系信息。',
+            title: titleWithSite('联系方式'),
+            description: '在这个交互式 3D 联系房间里找到我的社交媒体链接与联系表单。',
         },
 
-        sr: { name: '联系', hint: '与我取得联系' },
+                sr: { name: '联系', hint: '与我取得联系' },
     },
 ];
 

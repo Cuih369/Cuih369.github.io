@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { useFrame, useLoader, useThree } from '@react-three/fiber';
-import { Text, PositionalAudio } from '@react-three/drei';
+import { PositionalAudio } from '@react-three/drei';
+import { Text } from '../../text/Text';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import SkyChunk, { CHUNK_LENGTH, ROOM_Z } from './SkyChunk';
@@ -352,7 +353,7 @@ const IntroMilestone = ({ z, scrollProgressRef }) => {
                 anchorY="middle"
                 font="/fonts/RubikScribble-Regular.ttf"
             >
-                TOMASZ SZMAJDA
+                CUIH
             </Text>
 
             {/* Subtitle - Brand (spreads right) */}
@@ -365,7 +366,7 @@ const IntroMilestone = ({ z, scrollProgressRef }) => {
                 anchorY="middle"
                 font="/fonts/CabinSketch-Regular.ttf"
             >
-                (ITOM)
+                (CUiH)
             </Text>
 
             {/* Avatar on cloud - floating + spreads up-left */}
@@ -412,6 +413,9 @@ const IntroMilestone = ({ z, scrollProgressRef }) => {
 
 /**
  * MOCK DATA FOR AWARDS
+ *
+ * ⚠️ 示例数据（占位）：这些奖项、日期与外链来自上游作者，正式使用前请替换成你自己的。
+ *    Sanity（awardCertificate）有数据时不会用到这份回退数据。
  */
 const AWARDS_DATA = {
     featured: {

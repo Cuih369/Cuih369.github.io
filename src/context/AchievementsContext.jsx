@@ -4,6 +4,9 @@ import posthog from 'posthog-js';
 
 const AchievementsContext = createContext();
 
+// 成就进度的 localStorage 键（换站名不会影响已有访客的进度）
+const STORAGE_KEY = 'site_achievements';
+
 export const ACHIEVEMENTS = {
     corridor_enter: { id: 'corridor_enter', label: '点击门进入', title: '探索者' },
     corridor_explore: { id: 'corridor_explore', label: '滚动探索走廊', title: '漫游者' },
@@ -22,7 +25,7 @@ export const AchievementsProvider = ({ children }) => {
     // Load completed achievements from local storage
     const [completed, setCompleted] = useState(() => {
         try {
-            const saved = localStorage.getItem('itom_achievements');
+            const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 // 放入池中，但忽略 'corridor_enter'，以便进入提示始终出现
@@ -96,7 +99,7 @@ export const AchievementsProvider = ({ children }) => {
     // Save to localStorage when completed changes
     useEffect(() => {
         const toSave = completed.filter(id => id !== 'corridor_enter');
-        localStorage.setItem('itom_achievements', JSON.stringify(toSave));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     }, [completed]);
 
     const showTutorial = useCallback((id) => {
@@ -119,7 +122,7 @@ export const AchievementsProvider = ({ children }) => {
                 const updated = [...prev, id];
                 // Save locally excluding corridor_enter
                 const toSave = updated.filter(item => item !== 'corridor_enter');
-                localStorage.setItem('itom_achievements', JSON.stringify(toSave));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
                 return updated;
             });
 

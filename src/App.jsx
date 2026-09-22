@@ -1,6 +1,6 @@
 import { useState, Suspense, useEffect, useCallback, useLayoutEffect, lazy } from 'react';
 import { Canvas, useThree, useFrame, useLoader } from '@react-three/fiber';
-import { Preload, useTexture, Text, PerformanceMonitor } from '@react-three/drei';
+import { Preload, useTexture, PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 
 import Preloader from './components/dom/Preloader';

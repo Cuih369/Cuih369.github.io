@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text, PositionalAudio } from '@react-three/drei';
+import { PositionalAudio } from '@react-three/drei';
+import { Text } from '../../text/Text';
 import * as THREE from 'three';
 import PaperAirplane from './PaperAirplane';
 import InfiniteSkyManager from './InfiniteSkyManager';
@@ -25,7 +26,7 @@ export const AUDIO_SETTINGS = {
 // Story sections - positions define where each milestone appears
 // Using CHUNK_LENGTH to create looping story (every ~40 units restarts)
 const STORY_MILESTONES = [
-    { id: 'intro', position: [0, 0, -15], type: 'intro', title: 'ITOM', subtitle: '< 创意开发者 />' },
+    { id: 'intro', position: [0, 0, -15], type: 'intro', title: 'CUiH', subtitle: '< 创意开发者 />' },
     { id: 'awards', position: [0, 0, -55], type: 'awards', title: '奖项', subtitle: '1 次 SOTD 获奖 • 1 次 CSS 获奖' },
     { id: 'journey', position: [0, 0, -95], type: 'journey', title: '历程', subtitle: '奥波莱大学计算机科学专业' },
     { id: 'skills', position: [0, 0, -135], type: 'skills', title: '技能', subtitle: 'React • Three.js • GSAP • 创意编程' },

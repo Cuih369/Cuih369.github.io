@@ -1,10 +1,13 @@
-# 🎨 Portfolio ITOM - Project Documentation
+# 🎨 个人博客（3D 交互式场景）- Project Documentation
 
 > **For AI Agents**: Read this file first to understand the project before making changes.
+> 架构细节与「改哪里的唯一数据源」清单见 [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)（中文，长期维护用）。
 
 ## 📋 Project Overview
 
-This is an **immersive 3D portfolio website** built with React Three Fiber. The user navigates through an infinite corridor with doors leading to different "rooms" (sections). The entire visual style is **hand-drawn black/white sketch aesthetic**.
+This is an **immersive 3D blog / portfolio** built with React Three Fiber. The user navigates through an infinite corridor with doors leading to different "rooms" (sections). The entire visual style is **hand-drawn black/white sketch aesthetic**.
+
+⚠️ 中文渲染约定：手写体（Cabin Sketch / Rubik Scribble）没有中文字形，含中文的 `<Text>` 必须使用本地中文字体（`src/config/fonts.js`）；`src/components/canvas/text/Text.jsx` 已按内容自动切换，新增 3D 文字请从该模块 import `Text`，不要直接从 drei 引入。
 
 ### Key Experience Flow
 1. **Entrance** → User enters through an animated door
@@ -21,9 +24,9 @@ This is an **immersive 3D portfolio website** built with React Three Fiber. The 
 
 | Technology | Purpose |
 |------------|---------|
-| React 18 | UI Framework |
+| React 19 | UI Framework |
 | React Three Fiber | 3D Rendering (Three.js wrapper) |
-| @react-three/drei | R3F helpers (Text, useTexture, Html, etc.) |
+| @react-three/drei | R3F helpers (useTexture, Html, etc.)；3D 文字统一走 `src/components/canvas/text/Text.jsx` |
 | GSAP | Animations |
 | Vite | Build tool & dev server |
 | SCSS | Styling |

@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Text } from '../text/Text';
 import * as THREE from 'three';
 import gsap from 'gsap';
 

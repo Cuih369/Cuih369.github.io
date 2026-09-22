@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useScene } from '../context/SceneContext';
+import { ROOM_META as ROOMS_META, PATH_TO_ROOM as ROOMS_PATH_TO_ROOM } from '../config/rooms';
+import { SITE_NAME, SITE_DESCRIPTION } from '../config/site';
 
 /**
  * useDocumentMeta — Dynamic Meta Tags & Virtual Routing (History API)
@@ -9,42 +11,18 @@ import { useScene } from '../context/SceneContext';
  * browser back/forward buttons for seamless navigation.
  */
 
-const ROOM_META = {
-    null: {
-        path: '/',
-        title: 'ITom — 创意 3D 作品集',
-        description: '由 Tomasz "ITom" Szmajda 打造的交互式 3D 开发者作品集。探索手绘画廊中的 WebGL 实验、React 项目与 GSAP 动画。',
-    },
-    about: {
-        path: '/about',
-        title: '关于我 — ITom 作品集',
-        description: '了解 Tomasz "ITom" Szmajda — 一位专注于 3D 网页体验、React、Three.js 和 GSAP 动画的创意前端开发者。',
-    },
-    gallery: {
-        path: '/gallery',
-        title: '作品集与项目 — ITom 作品集',
-        description: '浏览 ITom 的交互式 3D 网页开发项目作品集。每个项目都以手绘卡片的形式展示，可翻转探索。',
-    },
-    studio: {
-        path: '/studio',
-        title: '工作室 — ITom 作品集',
-        description: '探索 ITom 的内容工作室 — 在沉浸式 3D 空间中通过悬浮显示器观看 YouTube 视频、博客文章和 TikTok。',
-    },
-    contact: {
-        path: '/contact',
-        title: '联系方式 — ITom 作品集',
-        description: '与 Tomasz "ITom" Szmajda 取得联系。在这个交互式 3D 联系房间中找到社交媒体链接和联系信息。',
-    },
+// 走廊（未进入任何房间）的元信息（站名与简介来自 src/config/site.js）
+const CORRIDOR_META = {
+    path: '/',
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
 };
 
+// 房间元信息来自房间注册表（rooms.js），仅走廊需要单独补充
+const ROOM_META = { null: CORRIDOR_META, ...ROOMS_META };
+
 // Map URL paths back to room IDs for deep linking
-const PATH_TO_ROOM = {
-    '/': null,
-    '/about': 'about',
-    '/gallery': 'gallery',
-    '/studio': 'studio',
-    '/contact': 'contact',
-};
+const PATH_TO_ROOM = { '/': null, ...ROOMS_PATH_TO_ROOM };
 
 /**
  * Returns the room ID that the initial URL points to (for deep linking).
@@ -82,12 +60,13 @@ export function useDocumentMeta() {
         if (ogDesc) ogDesc.setAttribute('content', meta.description);
 
         const ogUrl = document.querySelector('meta[property="og:url"]');
-        if (ogUrl) ogUrl.setAttribute('content', `https://itomdev.com${meta.path}`);
+        // 绝对地址用运行时 origin 拼接：本地 / 预览域名 / 正式域名都不会写错
+        if (ogUrl) ogUrl.setAttribute('content', `${window.location.origin}${meta.path}`);
 
         // Update canonical link to ensure virtual routes are correctly indexable as separate pages
         const canonicalTag = document.querySelector('link[rel="canonical"]');
         if (canonicalTag) {
-            canonicalTag.setAttribute('href', `https://itomdev.com${meta.path}`);
+            canonicalTag.setAttribute('href', `${window.location.origin}${meta.path}`);
         }
 
         // Push to browser history (only if not handling a popstate event and room actually changed)

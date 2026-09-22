@@ -1,11 +1,16 @@
 import { createClient } from '@sanity/client';
+import { ROOMS } from './src/config/rooms.js';
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, AUTHOR_NAME, AUTHOR_HANDLE } from './src/config/site.js';
 
 const sanityClient = createClient({
-    projectId: 'kv5wjjmj',
+    projectId: 'kv5wjjmj', // TODO: 换成你自己的 Sanity projectId，或改走本地数据（见 docs/ARCHITECTURE.md §7）
     dataset: 'production',
     useCdn: true,
     apiVersion: '2024-03-01',
 });
+
+// 站点绝对地址：优先环境变量（Cloudflare Pages 构建期提供 CF_PAGES_URL），否则读 src/config/site.js
+const SITE_BASE = (process.env.SITE_URL || process.env.CF_PAGES_URL || SITE_URL).replace(/\/+$/, '');
 
 // Tech stack filename -> human-readable name mapping for JSON-LD
 // 平台标识 → 展示名称映射（供爬虫读取的语义 HTML 使用）
@@ -52,10 +57,10 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
     // --- 1. Person: Central node of the Knowledge Graph ---
     const person = {
         '@type': 'Person',
-        '@id': 'https://itomdev.com/#person',
-        name: 'Tomasz Szmajda',
-        alternateName: ['ITom', 'ITom Dev', 'Tomasz ITom Szmajda'],
-        url: 'https://itomdev.com',
+        '@id': SITE_BASE + '/#person',
+        name: AUTHOR_NAME,
+        alternateName: [AUTHOR_HANDLE],
+        url: SITE_BASE,
         jobTitle: '创意前端开发者',
         description: globalInfo?.aboutMe || '专注于 3D 网页体验的创意开发者。',
         knowsAbout: ['React', 'Three.js', 'JavaScript', 'TypeScript', 'GSAP', 'Next.js', 'WebGL', '3D Graphics', 'Web Development'],
@@ -73,21 +78,21 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
     // --- 2. WebSite ---
     const website = {
         '@type': 'WebSite',
-        '@id': 'https://itomdev.com/#website',
-        url: 'https://itomdev.com',
-        name: globalInfo?.siteTitle || 'Tomasz "ITom" Szmajda | 创意 3D 作品集',
-        description: globalInfo?.siteDescription || 'Tomasz Szmajda 的交互式 3D 开发者作品集',
-        publisher: { '@id': 'https://itomdev.com/#person' }
+        '@id': SITE_BASE + '/#website',
+        url: SITE_BASE,
+        name: globalInfo?.siteTitle || SITE_NAME,
+        description: globalInfo?.siteDescription || SITE_DESCRIPTION,
+        publisher: { '@id': SITE_BASE + '/#person' }
     };
     graph.push(website);
 
     // --- 3. ProfilePage ---
     const profilePage = {
         '@type': 'ProfilePage',
-        '@id': 'https://itomdev.com/#profilepage',
-        url: 'https://itomdev.com',
-        mainEntity: { '@id': 'https://itomdev.com/#person' },
-        about: { '@id': 'https://itomdev.com/#person' }
+        '@id': SITE_BASE + '/#profilepage',
+        url: SITE_BASE,
+        mainEntity: { '@id': SITE_BASE + '/#person' },
+        about: { '@id': SITE_BASE + '/#person' }
     };
     graph.push(profilePage);
 
@@ -95,7 +100,7 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
     if (faqList && faqList.length > 0) {
         const faqPage = {
             '@type': 'FAQPage',
-            '@id': 'https://itomdev.com/#faq',
+            '@id': SITE_BASE + '/#faq',
             mainEntity: faqList.map(item => ({
                 '@type': 'Question',
                 name: item.question,
@@ -112,8 +117,8 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
     if (projects && projects.length > 0) {
         graph.push({
             '@type': 'ItemList',
-            '@id': 'https://itomdev.com/#projectslist',
-            name: 'Tomasz "ITom" Szmajda 的作品集项目',
+            '@id': SITE_BASE + '/#projectslist',
+            name: ` 的作品集项目`,
             description: '精选 Web 开发项目，展示 React、Three.js 与创意前端工程能力。',
             numberOfItems: projects.length,
             itemListElement: projects.map((p, i) => ({
@@ -124,7 +129,7 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
                     name: p.seoTitle || p.title,
                     description: p.seoDescription || p.description || '',
                     url: p.url || undefined,
-                    creator: { '@id': 'https://itomdev.com/#person' },
+                    creator: { '@id': SITE_BASE + '/#person' },
                     ...(p.techStack && p.techStack.length > 0 ? {
                         keywords: p.techStack.map(t => TECH_STACK_NAMES[t] || t).join(', ')
                     } : {}),
@@ -137,11 +142,11 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
             const projectSlug = p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
             graph.push({
                 '@type': 'CreativeWork',
-                '@id': `https://itomdev.com/#project-${projectSlug}`,
+                '@id': `${SITE_BASE}/#project-${projectSlug}`,
                 name: p.seoTitle || p.title,
                 description: p.seoDescription || p.description || '',
                 url: p.url || undefined,
-                creator: { '@id': 'https://itomdev.com/#person' },
+                creator: { '@id': SITE_BASE + '/#person' },
                 ...(p.techStack && p.techStack.length > 0 ? {
                     keywords: p.techStack.map(t => TECH_STACK_NAMES[t] || t).join(', ')
                 } : {}),
@@ -164,66 +169,66 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
 
                 graph.push({
                     '@type': 'VideoObject',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
+                    '@id': `${SITE_BASE}/#${studioSlug}`,
                     name: s.seoTitle || s.title,
                     description: s.seoDescription || s.description || '',
                     url: s.url || undefined,
                     contentUrl: s.url || undefined,
                     ...(embedUrl ? { embedUrl } : {}),
-                    thumbnailUrl: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
+                    thumbnailUrl: s.thumbnailUrl || SITE_BASE + '/og-image.png',
                     ...(s.duration ? { duration: `PT${s.duration.replace(':', 'M')}S` } : {}),
                     ...(s.date ? { uploadDate: formatIsoDate(s.date) } : {}),
                     ...(s.views ? { interactionStatistic: { '@type': 'InteractionCounter', interactionType: 'https://schema.org/WatchAction', userInteractionCount: s.views } } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
+                    author: { '@id': SITE_BASE + '/#person' },
                 });
             } else if (s.platform === 'blog') {
                 graph.push({
                     '@type': 'Article',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
+                    '@id': `${SITE_BASE}/#${studioSlug}`,
                     headline: s.seoTitle || s.title,
                     description: s.seoDescription || s.description || '',
                     url: s.url || undefined,
-                    image: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
+                    image: s.thumbnailUrl || SITE_BASE + '/og-image.png',
                     ...(s.date ? { datePublished: formatIsoDate(s.date) } : {}),
                     ...(s.readTime ? { timeRequired: `PT${s.readTime.replace(' min', '')}M` } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
+                    author: { '@id': SITE_BASE + '/#person' },
                 });
             } else if (s.platform === 'tiktok') {
                 graph.push({
                     '@type': 'VideoObject',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
+                    '@id': `${SITE_BASE}/#${studioSlug}`,
                     name: s.seoTitle || s.title,
                     description: s.seoDescription || s.description || '',
                     url: s.url || undefined,
                     contentUrl: s.url || undefined,
-                    thumbnailUrl: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
+                    thumbnailUrl: s.thumbnailUrl || SITE_BASE + '/og-image.png',
                     ...(s.date ? { uploadDate: formatIsoDate(s.date) } : {}),
                     ...(s.views ? { interactionStatistic: { '@type': 'InteractionCounter', interactionType: 'https://schema.org/WatchAction', userInteractionCount: s.views } } : {}),
                     ...(s.likes ? { aggregateRating: { '@type': 'AggregateRating', ratingCount: s.likes } } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
+                    author: { '@id': SITE_BASE + '/#person' },
                 });
             } else if (s.platform === 'instagram' || s.platform === 'x' || s.platform === 'linkedin') {
                 graph.push({
                     '@type': 'SocialMediaPosting',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
+                    '@id': `${SITE_BASE}/#${studioSlug}`,
                     headline: s.seoTitle || s.title,
                     description: s.seoDescription || s.description || '',
                     url: s.url || undefined,
-                    image: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
+                    image: s.thumbnailUrl || SITE_BASE + '/og-image.png',
                     ...(s.date ? { datePublished: formatIsoDate(s.date) } : {}),
                     ...(s.likes ? { interactionStatistic: { '@type': 'InteractionCounter', interactionType: 'https://schema.org/LikeAction', userInteractionCount: s.likes } } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
+                    author: { '@id': SITE_BASE + '/#person' },
                 });
             } else if (s.platform === 'codrops') {
                 graph.push({
                     '@type': 'Article',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
+                    '@id': `${SITE_BASE}/#${studioSlug}`,
                     headline: s.seoTitle || s.title,
                     description: s.seoDescription || s.description || '',
                     url: s.url || undefined,
-                    image: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
+                    image: s.thumbnailUrl || SITE_BASE + '/og-image.png',
                     ...(s.date ? { datePublished: formatIsoDate(s.date) } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
+                    author: { '@id': SITE_BASE + '/#person' },
                 });
             }
         });
@@ -234,8 +239,8 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
         const categoryLabels = { sotd: '每日最佳', sotm: '每月最佳', other: '荣誉提名' };
         graph.push({
             '@type': 'ItemList',
-            '@id': 'https://itomdev.com/#awardslist',
-            name: 'Tomasz "ITom" Szmajda 获得的网页设计奖项',
+            '@id': SITE_BASE + '/#awardslist',
+            name: ` 获得的网页设计奖项`,
             numberOfItems: awards.length,
             itemListElement: awards.map((a, i) => ({
                 '@type': 'ListItem',
@@ -247,7 +252,7 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
                     url: a.url || undefined,
                     description: a.seoDescription || undefined,
                     award: categoryLabels[a.category] || a.category,
-                    creator: { '@id': 'https://itomdev.com/#person' },
+                    creator: { '@id': SITE_BASE + '/#person' },
                 }
             }))
         });
@@ -261,8 +266,8 @@ function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
 
 // Helper to generate the llms.txt content in clean Markdown
 function buildLlmsTxt(globalInfo, projects, studio, awards, faqList) {
-    const siteTitle = globalInfo?.siteTitle || 'Tomasz "ITom" Szmajda | 创意 3D 作品集';
-    const siteDescription = globalInfo?.siteDescription || '交互式 3D 开发者作品集';
+    const siteTitle = globalInfo?.siteTitle || SITE_NAME;
+    const siteDescription = globalInfo?.siteDescription || SITE_DESCRIPTION;
     const aboutMe = globalInfo?.aboutMe || '我是一名专注于 3D 网页体验的创意开发者。';
 
     let content = `# ${siteTitle}\n`;
@@ -278,7 +283,7 @@ function buildLlmsTxt(globalInfo, projects, studio, awards, faqList) {
         content += `## 精选作品集项目\n`;
         projects.forEach(p => {
             const tech = p.techStack ? `（技术栈：${p.techStack.map(t => TECH_STACK_NAMES[t] || t).join('、')}）` : '';
-            content += `- [${p.seoTitle || p.title}](${p.url || 'https://itomdev.com'}): ${p.seoDescription || p.description || ''}${tech}\n`;
+            content += `- [${p.seoTitle || p.title}](${p.url || SITE_BASE}): ${p.seoDescription || p.description || ''}${tech}\n`;
         });
         content += `\n`;
     }
@@ -286,7 +291,7 @@ function buildLlmsTxt(globalInfo, projects, studio, awards, faqList) {
     if (studio && studio.length > 0) {
         content += `## 工作室内容与发布\n`;
         studio.forEach(s => {
-            content += `- [${s.seoTitle || s.title} (${s.platform})](${s.url || 'https://itomdev.com'}): ${s.seoDescription || s.description || ''}\n`;
+            content += `- [${s.seoTitle || s.title} (${s.platform})](${s.url || SITE_BASE}): ${s.seoDescription || s.description || ''}\n`;
         });
         content += `\n`;
     }
@@ -296,7 +301,7 @@ function buildLlmsTxt(globalInfo, projects, studio, awards, faqList) {
         const categoryLabels = { sotd: '每日最佳', sotm: '每月最佳', other: '荣誉提名' };
         awards.forEach(a => {
             const category = categoryLabels[a.category] || a.category;
-            content += `- **${category}** — [${a.seoTitle || a.title}](${a.url || 'https://itomdev.com'})：于 ${a.date || '未知'} 获奖。 ${a.seoDescription || ''}\n`;
+            content += `- **${category}** — [${a.seoTitle || a.title}](${a.url || SITE_BASE})：于 ${a.date || '未知'} 获奖。 ${a.seoDescription || ''}\n`;
         });
         content += `\n`;
     }
@@ -328,7 +333,7 @@ export function generateSeoHtml() {
                 cachedLlmsContent = buildLlmsTxt(globalInfo, projects, studio, awards, faqList);
             } catch (e) {
                 console.error('SEO Plugin Error: Failed to fetch Sanity data for llms.txt', e);
-                cachedLlmsContent = `# Tomasz Szmajda\n> 创意开发者\n`;
+                cachedLlmsContent = `# ${SITE_NAME}\n> ${SITE_DESCRIPTION}\n`;
             }
         }
         return cachedLlmsContent;
@@ -363,8 +368,8 @@ export function generateSeoHtml() {
                 ]);
 
                 // Fallback values if globalInfo is not yet created in Sanity
-                const siteTitle = globalInfo?.siteTitle || 'ITom — 创意开发者';
-                const siteDescription = globalInfo?.siteDescription || '创意 Web 开发者的交互式 3D 作品集。';
+                const siteTitle = globalInfo?.siteTitle || SITE_NAME;
+                const siteDescription = globalInfo?.siteDescription || SITE_DESCRIPTION;
                 const aboutMe = globalInfo?.aboutMe || '我是一名专注于 3D 网页体验的创意开发者。';
 
                 // Cache llms.txt content for later bundle emission
@@ -470,6 +475,27 @@ export function generateSeoHtml() {
                         `<meta name="twitter:description" content="${siteDescription}" />`
                     );
 
+                // 绝对地址统一使用 SITE_BASE（换域名只改 src/config/site.js 或设环境变量 SITE_URL）
+                const canonicalUrl = `${SITE_BASE}/`;
+                const ogImageUrl = `${SITE_BASE}/og-image.png`;
+                transformedHtml = transformedHtml
+                    .replace(
+                        /<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/i,
+                        `<link rel="canonical" href="${canonicalUrl}" />`
+                    )
+                    .replace(
+                        /<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/i,
+                        `<meta property="og:url" content="${canonicalUrl}" />`
+                    )
+                    .replace(
+                        /<meta\s+property="og:image"\s+content="[^"]*"\s*\/?>/i,
+                        `<meta property="og:image" content="${ogImageUrl}" />`
+                    )
+                    .replace(
+                        /<meta\s+name="twitter:image"\s+content="[^"]*"\s*\/?>/i,
+                        `<meta name="twitter:image" content="${ogImageUrl}" />`
+                    );
+
                 // Inject dynamic JSON-LD right before </head> (next to the existing static one)
                 transformedHtml = transformedHtml.replace('</head>', `${jsonLdScript}</head>`);
 
@@ -500,6 +526,33 @@ export function generateSeoHtml() {
                 fileName: 'llms.txt',
                 source: content
             });
+
+            // 从房间注册表生成 sitemap.xml：新增房间会自动进入站点地图，无需手动同步
+            try {
+                const entries = [
+                    { path: '/', priority: '1.0' },
+                    ...ROOMS.map((room, index) => ({ path: room.path, priority: (0.9 - index * 0.1).toFixed(1) }))
+                ];
+                const lastmod = new Date().toISOString().slice(0, 10);
+                const sitemap = [
+                    '<?xml version="1.0" encoding="UTF-8"?>',
+                    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+                    ...entries.map((entry) => [
+                        '  <url>',
+                        `    <loc>${SITE_BASE}${entry.path}</loc>`,
+                        `    <lastmod>${lastmod}</lastmod>`,
+                        '    <changefreq>monthly</changefreq>',
+                        `    <priority>${entry.priority}</priority>`,
+                        '  </url>'
+                    ].join('\n')),
+                    '</urlset>',
+                    ''
+                ].join('\n');
+
+                this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemap });
+            } catch (error) {
+                console.error('SEO Plugin Error: failed to generate sitemap.xml', error);
+            }
         }
     };
 }

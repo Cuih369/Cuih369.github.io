@@ -7,7 +7,7 @@ export default {
       name: 'siteTitle',
       title: 'Site Title (Meta Title)',
       type: 'string',
-      description: 'The title of your website for search engines (e.g. ITom - Creative Developer)',
+      description: '站点名称，用于搜索引擎展示（例如：CUiH 的博客）',
       validation: (Rule) => Rule.required(),
     },
     {

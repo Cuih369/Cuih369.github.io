@@ -53,11 +53,14 @@ src/
 │   │   │   ├── Gallery/          # 晾衣绳项目卡（PaperMaterial / usePaintMaterial / GalleryClouds）
 │   │   │   ├── Studio/           # 悬浮显示器塔（contentData.js 为回退内容）
 │   │   │   └── roomRegistry.jsx  # ★ roomId → 房间组件映射（必须静态导入，见 §8.3）
-│   │   └── shaders/              # RevealMaterial / PaintRevealMaterial / RevealBasicMaterial
+│   │   ├── shaders/              # RevealMaterial / PaintRevealMaterial / RevealBasicMaterial
+│   │   └── text/Text.jsx         # ★ 3D 文字统一入口：含中文自动切中文字体（见 §6.5）
 │   ├── dom/                      # Preloader / PaperTransition（纸张转场）
 │   └── ui/                       # NavigationUI(地图) / ScreenReaderOverlay / GlobalOverlay / 成就面板 / 音频控件
 ├── config/
 │   ├── rooms.js                  # ★ 房间注册表（唯一数据源，纯数据无 JSX）
+│   ├── site.js                   # ★ 站点配置：域名 / 站名 / 作者 / 社交链接（见 §6.5）
+│   ├── fonts.js                  # ★ 字体路径 + 「内容是否含中文」判断（见 §6.5）
 │   ├── sanity.js                 # Sanity 客户端 + 图片 URL 构造
 │   └── texturePreloadList.js     # 全部纹理的预加载清单（按场景分组导出）
 ├── context/                      # SceneContext / AudioManager / AchievementsContext / PerformanceContext
@@ -67,11 +70,12 @@ src/
 ```
 
 ```
-public/          # 426 文件 / 97.3 MB（其中 textures 393 文件 / 86.3 MB）+ fonts + sounds + images + robots.txt + sitemap.xml + _headers + _redirects
+public/          # ~430 文件 / 110 MB（textures 393 / 86.3 MB + 中文字体 13.2 MB）+ fonts + sounds + images
+                 # robots.txt + _headers + _redirects（sitemap.xml 改为构建期生成，见 §9.2）
 functions/       # Cloudflare Pages Functions：sanity-cdn/[[catchall]].js（代理 cdn.sanity.io）
 portfolio-itom/  # 独立 Sanity Studio（自带 package.json，需单独 npm install；schemaTypes: galleryProject / studioItem / awardCertificate / globalInfo / faq）
 scripts/         # 构建期/维护脚本
-seo-plugin.js    # 构建期 Vite 插件：抓 Sanity 内容生成 SEO DOM + JSON-LD + llms.txt
+seo-plugin.js    # 构建期 Vite 插件：抓 Sanity 内容生成 SEO DOM + JSON-LD + llms.txt + sitemap.xml
 vite.config.js   # react() + viteCompression() + generateSeoHtml()，dev 期 /sanity-cdn 代理
 ```
 
@@ -166,9 +170,36 @@ vite.config.js   # react() + viteCompression() + generateSeoHtml()，dev 期 /sa
 
 1. 在 `ROOMS` 里加一项（走廊位置、门牌文字、标题、地图数据、`path`/`meta`、`sr`、`warmupPosition`）；数组顺序同时决定走廊门的生成顺序与预热顺序。
 2. 实现房间组件，并在 `roomRegistry.jsx` 注册。
-3. **手动同步静态文件**：`public/sitemap.xml`（新增 `<url>`）、`index.html` 里的 `#seo-content` 静态导航（构建期会被 `seo-plugin.js` 覆盖，但 dev 与兜底场景仍在用）。
+3. **可选**：`index.html` 里的 `#seo-content` 静态导航（dev 期与禁用 JS 时的兜底；构建期由 `seo-plugin.js` 按注册表整段重写）。`sitemap.xml` 已改为构建期生成，**无需手动同步**。
 
 其余全部自动跟上。
+
+### 6.5 站点配置与 3D 文字字体
+
+两处「改一个地方、全站生效」的配置，都在 `src/config/`。
+
+**`site.js` —— 站点级唯一数据源**
+
+| 导出 | 用途 | 主要读取方 |
+| --- | --- | --- |
+| `SITE_URL` | canonical / og:url / og:image / JSON-LD / sitemap 的绝对地址 | `seo-plugin.js`、`useDocumentMeta.js`、`MessagePaper.jsx` |
+| `SITE_NAME`、`SITE_LOCALE`、`SITE_DESCRIPTION` | 站名、语言、站点描述 | 同上 |
+| `AUTHOR_NAME`、`AUTHOR_HANDLE`、`AUTHOR_GITHUB_URL` | 作者署名（JSON-LD、无障碍层） | `seo-plugin.js`、`ScreenReaderOverlay.jsx` |
+| `SOCIAL_URLS`、`socialUrl(id)` | 「联系方式」房间水面木桶的链接；**留空的平台不渲染** | `ContactRoom.jsx` |
+| `siteBase()`、`titleWithSite(page)` | 去尾斜杠的根地址；`页面 — 站名` 标题 | 全站 |
+
+- 构建期可用环境变量 `SITE_URL` 或 `CF_PAGES_URL` 覆盖域名，无需改代码；浏览器端 canonical/og:url 用 `window.location.origin`，本地与预览域名都不会写错。
+- **换域名 / 换站名**：改 `src/config/site.js` →（必要时）同步 `public/robots.txt` 的 Sitemap 行 → 完成。`index.html` 的静态占位、`seo-plugin.js` 的 JSON-LD、`sitemap.xml` 都从这里派生。
+
+**`fonts.js` + `text/Text.jsx` —— 中文能不能显示的关键**
+
+drei 的 `<Text>` 底层是 troika，一段文字只能用**一个**字体文件渲染，而手写体 Cabin Sketch / Rubik Scribble **不含中文字形**（直接用会把中文渲染成空白）。所以：
+
+- 所有 3D 文字都从 `src/components/canvas/text/Text.jsx` 引入 `Text`（不要再直接从 `@react-three/drei` 引入）。包装组件用 `hasCJK()` 判断内容：含中文 → 切到本地中文字体 `CJK_FONT_URL`；否则原样沿用调用点传入的 `font`。
+- 字体放在 `public/fonts/`：`LXGWWenKaiLite-Regular.ttf`（霞鹜文楷 Lite，SIL OFL 1.1，13.2 MB；覆盖常用汉字、中文标点与 `▶ ▼ ○ ★ ✓ ← →` 等符号，许可证见 `public/fonts/OFL-LXGWWenKaiLite.txt`）。
+- 未覆盖的字符：emoji（📝 🎵 📷 ⭐）与 `◈ ✉ ✨ ❌` 等少数符号，字形可用性取决于在线回退服务（见 §10.2）；把门牌/图标换成中文字体里有的符号即可完全本地化。
+- 新增 3D 文字：从 `text/Text.jsx` 引入即可，不用自己判断中文。
+- 另外，`index.html` 还从 Google Fonts 加载 2D 界面字体（Caveat / Gloria Hallelujah / Inter）。2D 文本取不到字体时浏览器会**优雅回退**到系统字体（不像 troika 那样渲染空白），故暂未自托管；若要完全离线可用，可把这三个字体也放进 `public/fonts/` 并改用 `@font-face`。
 
 ---
 
@@ -188,7 +219,9 @@ vite.config.js   # react() + viteCompression() + generateSeoHtml()，dev 期 /sa
 
 ### 8.1 体积现状
 
-`public/` 共 426 文件 / **97.3 MB**，其中 `public/textures/` 393 文件 / **86.3 MB**。
+`public/` 共约 430 文件 / **110 MB**：`public/textures/` 393 文件 / **86.3 MB**（绝大头）+ 中文字体 `LXGWWenKaiLite-Regular.ttf` **13.2 MB**。
+
+> 中文字体是「中文能不能显示」的前提（见 §6.5）。它只在 3D 文字首次出现时加载（troika 按需拉取），但 13.2 MB 仍是本仓库最重的单个文件；想瘦身可用 `fonttools` 按本站用到的字符集做子集化（本机无 Node/Python 环境，暂未做）。
 
 ### 8.2 纹理命名约定
 
@@ -218,10 +251,13 @@ vite.config.js   # react() + viteCompression() + generateSeoHtml()，dev 期 /sa
 
 `seo-plugin.js` 是一个 Vite 插件，在构建时：
 
-- 抓取 Sanity 内容，生成 `#seo-content` 语义 DOM（爬虫可见）；
-- 注入 JSON-LD 结构化数据；
+- 抓取 Sanity 内容，生成 `#seo-content` 语义 DOM（爬虫可见，整段替换 `index.html` 的静态占位）；
+- 注入 JSON-LD 结构化数据（作者、房间列表、项目条目）；
 - 生成 `llms.txt`；
-- 覆写 `index.html` 的 `<title>` / `<meta name="description">`。
+- **从 `ROOMS` 生成 `sitemap.xml`**（新增房间自动进站点地图，无需手动维护）；
+- 覆写 `index.html` 的 `<title>` / `<meta name="description">` / `canonical` / `og:url` / `og:image` / `twitter:image`。
+
+站点域名来自 `src/config/site.js`（`SITE_URL`），构建期可用环境变量 `SITE_URL` 或 `CF_PAGES_URL` 覆盖。
 
 > 注意：`index.html` 里的静态 SEO 文案是**开发期与兜底**用的，生产构建会被插件覆盖。改文案要两边都改。
 
@@ -239,34 +275,44 @@ vite.config.js   # react() + viteCompression() + generateSeoHtml()，dev 期 /sa
 
 ## 10. 已知坑点与待办
 
-### 10.1 站点域名硬编码（换域名必改）
+### 10.1 站点域名：已收敛到 `src/config/site.js`（✅ 已解决）
 
-`https://itomdev.com` 散布在 4 处，共 10+ 行：
+换域名只改 `SITE_URL` 一处；构建期还可用环境变量 `SITE_URL` / `CF_PAGES_URL` 覆盖。派生位置：
 
-| 文件 | 位置 |
+| 文件 | 说明 |
 | --- | --- |
-| `index.html` | `canonical`、`og:url`、`og:image`、`twitter:image` |
-| `public/sitemap.xml` | 5 个 `<loc>` |
-| `src/hooks/useDocumentMeta.js` | `og:url`、`canonical` |
-| `seo-plugin.js` | JSON-LD 的 `@id`（`#person`、`#studio-item-*` 等） |
+| `index.html` | 静态占位（title/description/canonical/og:/twitter:），构建期由 `seo-plugin.js` 重写 |
+| `seo-plugin.js` | JSON-LD `@id`、canonical、`og:url`、`og:image`、Sitemap 行、`sitemap.xml` |
+| `src/hooks/useDocumentMeta.js` | 运行时 canonical / `og:url`（用 `window.location.origin`） |
+| `public/robots.txt` | Sitemap 行（**这个仍需手动同步**） |
 
-### 10.2 3D 文字字体
+⚠️ 迁移自上游的 `itomdev.com` 域名已全部替换；若部署到自建域名，别忘了 `public/robots.txt` 与 `public/_headers` 里的注释示例。
 
-`<Text>` 共 46 处，其中只有 32 处显式指定了 `font`；未指定时 troika 会去 CDN 取默认字体，国内网络下可能失败（表现为字体回退/文字错位）。涉及文件：`CorridorDecorations.jsx`、`CorridorSegment.jsx`、`Door.jsx`、`HeroText.jsx`、`RoomInterior.jsx`、`rooms/Contact/MessagePaper.jsx`。建议逐步补上 `font="/fonts/..."`。
+### 10.2 3D 文字字体（✅ 中文已本地化，剩少数符号）
 
-### 10.3 尚未本地化的品牌文案
+已建立 `src/config/fonts.js` + `src/components/canvas/text/Text.jsx`：含中文的 `<Text>` 自动使用本地中文字体，不再依赖在线字体 CDN。仍受在线回退服务影响的是**中文字体里没有的符号**：emoji（📝 🎵 📷 ⭐）与 `◈ ✉ ✨ ❌`、`⏱ ⚙ ⛵` 等。这些字符目前靠 troika 的在线 unicode 回退（国内网络可能取不到 → 显示空白）。要彻底本地化，把 `rooms.js` 的 `corridor.icon` 与各处图标换成字体覆盖的符号（`◆ ▶ ★ ✓` 等）即可。
 
-`index.html` 的 `#seo-content`、`seo-plugin.js` 生成的 SEO 段落、`useDocumentMeta` 的标题、`rooms.js` 的 `meta` 中仍有 `ITom Dev` / `Tomasz Szmajda` 字样，以及 `public/og-image.webp` 等素材。做个人博客时需要整体替换。
+### 10.3 尚未替换的示例内容（做博客必须自己写）
+
+文案/品牌已中文化并换成占位站点信息，但**示例数据仍是上游作者的作品**，需要你自己替换：
+
+- `rooms/Gallery/GalleryRoom.jsx` 的回退项目数组：上游作品 `YOUNG MULTI` 及其外链（`young-multi-strona.netlify.app`）。
+- `rooms/About/InfiniteSkyManager.jsx` 的奖项/里程碑数据：上游作者的真实奖项条目与外链（`awwwards`、`thefwa`、GSAP SOTD 的 LinkedIn 帖等）。
+- `rooms/Studio/contentData.js`：38 条示例条目（标题/播放量是编造的，`url` 已改为平台首页占位）。
+- `public/og-image.png`（1200×630）已换成纯文字占位图（不含上游美术素材）；换成自己的分享图后记得同步 `index.html` 与 `seo-plugin.js` 里的 `og:image`。
+- `public/textures/**` 是上游手绘素材（`README` 与 `LICENSE` 已注明版权不可复用，长期公开发布建议替换）。
 
 ### 10.4 死代码 / 可清理项
 
-- `src/hooks/useScrollCamera.js`、`useParallax.js`、`useMouseParallax.js`：**0 引用**，可删。
-- `react-router-dom`：依赖列表里有，源码 0 引用。
-- `.agent/PROJECT.md` 部分内容已过时（写着 React 18、纹理在 `public/textures/doors/`），阅读时以本文与 `package.json` 为准。
+- ✅ 已删：`src/hooks/useScrollCamera.js`、`useParallax.js`、`useMouseParallax.js`（0 引用）、`CorridorSegment.jsx` 里的调试 `#segmentIndex` 文字、`App.jsx` 未使用的 `Text` 导入、`public/sitemap.xml`（改为构建期生成）。
+- ⏳ 待清理（需要 `npm install` 重新生成 `package-lock.json`，离线环境做不了，故本轮保留）：`react-router-dom`、`r3f-perf`、`vara`、`@gsap/react`、`@react-three/postprocessing` —— 源码 0 引用。清理步骤：删 `package.json` 对应依赖 → `npm install` → 提交新的 lock。
+- `.agent/PROJECT.md` 部分内容仍偏上游视角（纹理目录、房间清单），阅读时以本文与 `package.json` 为准。
 
-### 10.5 静态文件需手动同步
+### 10.5 新增房间时仍需手动处理的事
 
-`public/sitemap.xml` 与 `index.html` 的静态导航列表不会随注册表自动更新（`sitemap.xml` 目前还缺 `/studio` 之外的任何新增房间）。
+- `index.html` 的 `#seo-content`：仅 dev 与无 JS 兜底用，构建期会被重写，可选维护。
+- `public/robots.txt`：站点地图地址（换域名时）。
+- 若新房间用了新的中文字符集之外的符号，注意 §10.2 的字体覆盖问题。
 
 ---
 
@@ -277,3 +323,10 @@ vite.config.js   # react() + viteCompression() + generateSeoHtml()，dev 期 /sa
 
 **2026-09-22 · 房间注册表重构（路线 B，纯结构改动、不动美术）**
 新增 `src/config/rooms.js`（纯数据）与 `src/components/canvas/rooms/roomRegistry.jsx`；把走廊门、门牌文字、房间标题、传送坐标、相机瞥视、地图热区/叠加层/标签/引脚、虚拟路由与 SEO 元信息、无障碍导航共 11 处接入点统一到注册表。顺带清场：删除 `localhost_5173-*.html` 页面快照、`tmp/scan_npot.js`、`rooms/About/*.cjs` 调试脚本；`TODO.md`（上游波兰语待办）归档为 `docs/UPSTREAM-TODO.md`；重写 `README.md`。
+
+**2026-09-22 · 品牌占位化 + 中文显示修复（字体/域名/死代码）**
+- 新增 `src/config/site.js`（域名/站名/作者/社交链接）与 `src/config/fonts.js`；`seo-plugin.js`、`useDocumentMeta.js`、`rooms.js`、`ScreenReaderOverlay.jsx`、`MessagePaper.jsx`（表单来源白名单）全部改为从站点配置派生，域名可在构建期用 `SITE_URL` / `CF_PAGES_URL` 覆盖；`sitemap.xml` 改为构建期从 `ROOMS` 生成，删除手写的 `public/sitemap.xml`。
+- 3D 文字：新增 `src/components/canvas/text/Text.jsx`（含中文自动切本地字体）并把 16 个文件的 `<Text>` 导入切到该模块；新增中文字体 `public/fonts/LXGWWenKaiLite-Regular.ttf`（霞鹜文楷 Lite，OFL）+ 许可证；`Door.jsx` 的门牌与箭头改用本地字体，不再依赖在线字体 CDN。
+- 分享图：`public/og-image.webp`（上游作品截图）换成纯文字占位图 `public/og-image.png`，同步 `index.html` 与 `seo-plugin.js` 的 `og:image`。
+- 品牌文案：走廊大字 `ITOM` → `CUiH`、关于页署名、无障碍层标题、`localStorage` 成就键等；「联系方式」房间的社交木桶改为 `SOCIAL_URLS` 驱动（未填链接的平台不渲染）；工作室回退数据里的 28 条外链换成平台首页占位；`Google Search Console` 验证标签、`public/_headers`/`_redirects` 的域名硬编码、Sanity Studio 标题与包名一并清理。
+- 死代码：删调试用的 `#segmentIndex` 文字、`App.jsx` 未使用的 `Text` 导入；未使用的 npm 依赖保留待 `npm install` 时一并清理（见 §10.4）。

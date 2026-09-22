@@ -1,33 +1,39 @@
-https://portfolio-itom.pages.dev/*
-  X-Robots-Tag: noindex
+# Cloudflare Pages 响应头配置
+# 路径模式（/*、/*.webp…）对所有域名生效 —— 换域名不需要改这里。
+#
+# ⚠️ 预览域名默认会被搜索引擎收录。若要屏蔽，取消下面两行注释并把 <项目名> 换成
+#    你在 Cloudflare Pages 上的项目名（即 <项目名>.pages.dev）：
+# https://<项目名>.pages.dev/*
+#   X-Robots-Tag: noindex
 
-https://itomdev.com/*
+/*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
-# Cache static assets for 1 year (Performance & SEO Server Score)
-https://itomdev.com/*.js
+# 静态资源长期缓存（文件名带 hash 的产物可安全长缓存）
+/*.js
   Cache-Control: public, max-age=31536000, immutable
 
-https://itomdev.com/*.css
+/*.css
   Cache-Control: public, max-age=31536000, immutable
 
-https://itomdev.com/*.webp
+/*.webp
   Cache-Control: public, max-age=31536000, immutable
 
-https://itomdev.com/*.png
+/*.png
   Cache-Control: public, max-age=31536000, immutable
 
-https://itomdev.com/*.ktx2
+/*.ktx2
   Cache-Control: public, max-age=31536000, immutable
 
-https://itomdev.com/*.glb
+/*.glb
   Cache-Control: public, max-age=31536000, immutable
 
-https://itomdev.com/*.mp3
+/*.mp3
   Cache-Control: public, max-age=31536000, immutable
 
-https://itomdev.com/fonts/*
+# 字体（含中文字体 LXGW WenKai Lite）
+/fonts/*
   Cache-Control: public, max-age=31536000, immutable

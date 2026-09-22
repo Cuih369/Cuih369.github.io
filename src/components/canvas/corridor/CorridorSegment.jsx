@@ -1,5 +1,4 @@
 import { useMemo, memo } from 'react';
-import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 
 import CorridorWalls from './CorridorWalls';
@@ -15,7 +14,7 @@ import { ROOMS } from '../../../config/rooms';
  * CorridorSegment Component
  * 
  * A single repeatable chunk of the infinite corridor.
- * Each segment contains: walls, avatar, ITOM text, doors, decorations.
+ * Each segment contains: walls, avatar, name text, doors, decorations.
  * 
  * Segment length: 80 units
  * Positioned based on segmentIndex * segmentLength
@@ -93,7 +92,7 @@ const CorridorSegment = ({
 
             {/* === WELCOME AREA (Start of segment) - MOVED CLOSER === */}
             <group position={[0, 0, zOffset - 2]}>
-                {/* ITOM Text - centered (ITOM letters adjusted internally) */}
+                {/* 名字文字 - 居中（字母间距在 HeroText 内部调整） */}
                 <HeroText position={[0, -0.1, -0.5]} />
 
                 {/* Avatar - center */}
@@ -103,15 +102,6 @@ const CorridorSegment = ({
                 {/* Doodles around avatar */}
                 <Doodles />
 
-                {/* Segment number (debug - can remove later) */}
-                <Text
-                    position={[1.7, 1.4, 0.3]}
-                    fontSize={0.12}
-                    color="#ccc"
-                    anchorX="center"
-                >
-                    #{segmentIndex}
-                </Text>
             </group>
 
             {/* === DOOR SECTIONS (wall + door + label as one unit) === */}

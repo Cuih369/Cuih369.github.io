@@ -19,7 +19,7 @@
 ## 技术栈
 
 - **React 19** + **React Three Fiber 9**（Three.js 0.182）负责 3D 渲染
-- **@react-three/drei** 提供 `Text` / `useTexture` / `Html` 等辅助组件
+- **@react-three/drei** 提供 `useTexture` / `Html` 等辅助组件；3D 文字统一走 `src/components/canvas/text/Text.jsx`（含中文时自动切换本地中文字体）
 - **GSAP** 负责相机与界面动画
 - **Vite 7** 构建，**SCSS** 样式，**vite-plugin-compression** 产出压缩资源
 - **Sanity** 作为内容源（Headless CMS），构建期通过 `seo-plugin.js` 拉取内容生成 SEO DOM 与 JSON-LD
@@ -37,7 +37,7 @@ npm run preview    # 预览构建产物（性能测试请用这个，不要用 d
 npm run lint       # ESLint
 ```
 
-> 项目包含数百张高分辨率纹理（`public/textures` 约 86 MB），dev 环境首次加载会偏慢属正常现象。
+> 项目包含数百张高分辨率纹理（`public/textures` 约 86 MB）与一个 13 MB 的中文字体（`public/fonts/LXGWWenKaiLite-Regular.ttf`），dev 环境首次加载会偏慢属正常现象。
 
 ## 目录结构
 
@@ -53,12 +53,15 @@ src/
 │   └── ui/                # 导航、地图、成就、音频控件、无障碍层
 ├── config/
 │   ├── rooms.js           # ★ 房间注册表：走廊门 / 门牌 / 标题 / 传送坐标 / 地图 / 路由与 SEO 的唯一数据源
+│   ├── site.js            # ★ 站点配置：域名 / 站名 / 作者 / 社交链接（换域名、换站名只改这里）
+│   ├── fonts.js           # ★ 3D 文字字体路径 + 中文字符判断
 │   ├── sanity.js          # Sanity 客户端配置
 │   └── texturePreloadList.js
 ├── context/               # SceneContext（全局状态机）、音频、成就、性能分级
 ├── hooks/                 # 相机、Sanity 数据、文档元信息
 └── styles/                # SCSS（按组件拆分 + 基础变量/混入）
-public/                    # 纹理、字体、音效、地图、robots.txt、sitemap.xml、_headers、_redirects
+public/                    # 纹理、字体、音效、地图、robots.txt、_headers、_redirects
+                           # （sitemap.xml 由构建期生成，不在仓库里）
 functions/                 # Cloudflare Pages Functions（Sanity CDN 代理）
 portfolio-itom/            # 独立的 Sanity Studio（在它自己的目录里 npm install / npm run dev）
 ```
@@ -67,13 +70,27 @@ portfolio-itom/            # 独立的 Sanity Studio（在它自己的目录里 
 
 1. 在 `src/config/rooms.js` 的 `ROOMS` 数组里加一项（走廊位置、门牌文字、标题、地图引脚、路由与 SEO 元信息）。
 2. 在 `src/components/canvas/rooms/roomRegistry.jsx` 里注册对应的房间组件。
-3. 从 `ROOMS` 派生的门、门牌、标题、传送坐标、相机瞥视、地图热区/引脚、虚拟路由、屏幕阅读器导航、`sitemap.xml` 都会自动跟上。
+3. 从 `ROOMS` 派生的门、门牌、标题、传送坐标、相机瞥视、地图热区/引脚、虚拟路由、屏幕阅读器导航、`sitemap.xml`、构建期 SEO 片段都会自动跟上。
 
-> `public/sitemap.xml`、`index.html` 的静态 SEO 片段属于静态文件，新增房间时需要手动同步。
+> 唯一需要留意的静态文件是 `index.html` 里的 `#seo-content`（仅 dev 与禁用 JS 时使用，构建期会被插件整段重写）。
+
+## 换成你自己的博客（必改清单）
+
+| 事项 | 位置 | 说明 |
+|------|------|------|
+| 域名 / 站名 / 作者 / 社交链接 | `src/config/site.js` | `SITE_URL`、`SITE_NAME`、`AUTHOR_*`、`SOCIAL_URLS`。社交链接留空则「联系方式」房间不渲染对应木桶 |
+| 站点地图地址 | `public/robots.txt` | 换域名后同步 Sitemap 行 |
+| 预览域名防收录 | `public/_headers` | 按注释取消 `X-Robots-Tag: noindex` 并填项目名 |
+| 联系表单 | 环境变量 `VITE_WEB3FORMS_KEY` | 到 [Web3Forms](https://web3forms.com) 申领自己的 key；预览域名可用 `VITE_EXTRA_ALLOWED_ORIGINS` 放行（本地 localhost 始终放行） |
+| 内容源 | `src/config/sanity.js`、`portfolio-itom/` | 默认仍是上游的 Sanity 项目（`kv5wjjmj`），建议换成自己的项目 |
+| 示例内容 | `rooms/Gallery/GalleryRoom.jsx`、`rooms/About/InfiniteSkyManager.jsx`、`rooms/Studio/contentData.js` | 目前是上游作者的示例作品/奖项，**必须替换成你自己的**（见 `docs/ARCHITECTURE.md` §10.3） |
+| 分享图 | `public/og-image.png` | 1200×630 占位图（纯文字，无美术素材）；换成自己的图后同步 `index.html` 与 `seo-plugin.js` 里的 `og:image` |
+| 素材版权 | `public/textures/**` | 上游手绘素材版权归原作者，长期公开发布请替换 |
 
 ## 与上游的关系
 
 - 代码以 **MIT 许可**发布，原始版权归 **Tomasz Szmajda**（见 [`LICENSE`](LICENSE)）。
 - ⚠️ 上游明确声明：**个人素材、3D 纹理、图片与文案版权归 Tomasz Szmajda 所有，未经授权不得复用**。若本项目要长期公开发布，请替换这些素材。
 - 上游仓库地址：https://github.com/ITomPoland/portfolio-itom
-- 待替换项：`index.html`、`public/sitemap.xml`、`src/hooks/useDocumentMeta.js`、`seo-plugin.js` 中的站点域名 `https://itomdev.com` 仍是原作者的域名。
+- 已清理：站点域名（`https://itomdev.com`）、Search Console 验证标签、社交与内容外链等品牌痕迹已全部移除或改为占位（域名统一收敛到 `src/config/site.js`）。
+- 字体：`public/fonts/LXGWWenKaiLite-Regular.ttf`（霞鹜文楷 Lite）以 **SIL OFL 1.1** 分发，许可证见 `public/fonts/OFL-LXGWWenKaiLite.txt`。
