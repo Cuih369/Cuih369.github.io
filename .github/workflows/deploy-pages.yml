@@ -1,0 +1,76 @@
+# 部署到 GitHub Pages（用户站点：https://cuih369.github.io/）
+#
+# 为什么用「用户站点」：仓库名为 Cuih369.github.io 时站点发布在域名根路径，
+# 站内资源（/textures/...、/fonts/...）与前端路由（/blog、/gallery）都能直接对应。
+# 若改成项目站点（仓库名 blog → https://cuih369.github.io/blog/），需要同时改
+# vite base、约 450 处资源路径与 /blog 路由前缀，见 docs/ARCHITECTURE.md §9.3。
+#
+# 站点地址（canonical / og:url / sitemap.xml / robots.txt）取自 src/config/site.js
+# 的 SITE_URL，不在这里写死：换域名只改那一个文件。
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只跑一个部署任务，且不打断进行中的发布
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # 冒烟检查：seo-plugin.js 生成的部署文件少一个就直接失败，避免发出半成品
+      - name: Verify build output
+        run: |
+          for f in index.html 404.html sitemap.xml robots.txt llms.txt; do
+            test -f "dist/$f" || { echo "ERROR: dist/$f 缺失"; exit 1; }
+          done
+          echo "build output verified"
+
+      # GitHub Pages 默认走 Jekyll，会吞掉下划线开头的文件（如 public/_headers），关掉更稳
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

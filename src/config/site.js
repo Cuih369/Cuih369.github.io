@@ -9,8 +9,9 @@
  * CI（如 Cloudflare Pages）可用环境变量 SITE_URL 或 CF_PAGES_URL 覆盖，无需改代码。
  */
 
-// TODO: 换成你的正式域名（末尾不要带斜杠）
-export const SITE_URL = 'https://example.com';
+// 站点正式地址（末尾不要带斜杠）。当前部署在 GitHub Pages 用户站点（仓库名 Cuih369.github.io → 域名根路径）。
+// 以后绑定自定义域名时只改这一行：canonical / og:url / og:image / JSON-LD / sitemap.xml / robots.txt 都跟着变。
+export const SITE_URL = 'https://cuih369.github.io';
 
 export const SITE_NAME = '个人博客';
 export const SITE_LOCALE = 'zh-CN';

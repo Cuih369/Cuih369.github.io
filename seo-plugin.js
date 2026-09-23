@@ -1,6 +1,6 @@
 import { createClient } from '@sanity/client';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync, existsSync, copyFileSync } from 'node:fs';
+import { join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOMS } from './src/config/rooms.js';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, AUTHOR_NAME, AUTHOR_HANDLE } from './src/config/site.js';
@@ -496,6 +496,8 @@ function buildLlmsTxt(globalInfo, projects, studio, awards, faqList, posts) {
 
 export function generateSeoHtml() {
     let cachedLlmsContent = '';
+    let isBuild = false;
+    let outDir = 'dist';
 
     async function getLlmsContent() {
         if (!cachedLlmsContent) {
@@ -519,6 +521,11 @@ export function generateSeoHtml() {
 
     return {
         name: 'sanity-seo-plugin',
+
+        configResolved(config) {
+            isBuild = config.command === 'build';
+            outDir = config.build.outDir;
+        },
 
         // Serve llms.txt in local development mode
         configureServer(server) {
@@ -754,6 +761,25 @@ export function generateSeoHtml() {
                 this.emitFile({ type: 'asset', fileName: 'robots.txt', source: buildRobotsTxt() });
             } catch (error) {
                 console.error('SEO Plugin Error: failed to generate robots.txt', error);
+            }
+        },
+
+        /**
+         * 纯静态托管（GitHub Pages 等）没有服务端 rewrites：
+         * 把构建好的 index.html 复制一份成 404.html，这样 /gallery、/blog/<slug> 这类
+         * 深链会先回落到 SPA，再由前端路由（useDocumentMeta / useBlogRoute）接管。
+         * Cloudflare Pages 已有 public/_redirects 兜底，这份 404.html 只是冗余保险。
+         * 注意：需要在 index.html 写盘之后执行，所以放在 closeBundle 而不是 generateBundle。
+         */
+        closeBundle() {
+            if (!isBuild) return;
+            try {
+                const dir = isAbsolute(outDir) ? outDir : resolve(process.cwd(), outDir);
+                const indexFile = join(dir, 'index.html');
+                if (!existsSync(indexFile)) return;
+                copyFileSync(indexFile, join(dir, '404.html'));
+            } catch (error) {
+                console.error('SEO Plugin Error: failed to generate 404.html', error);
             }
         }
     };
