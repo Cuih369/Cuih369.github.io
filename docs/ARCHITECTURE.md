@@ -78,7 +78,7 @@ src/
 
 ```
 public/          # ~430 文件 / 110 MB（textures 393 / 86.3 MB + 中文字体 13.2 MB）+ fonts + sounds + images
-                 # robots.txt + _headers + _redirects（sitemap.xml 改为构建期生成，见 §9.2）
+                 # _headers + _redirects（sitemap.xml 与 robots.txt 改为构建期生成，见 §9.2）
 functions/       # Cloudflare Pages Functions：sanity-cdn/[[catchall]].js（代理 cdn.sanity.io）
 portfolio-itom/  # 独立 Sanity Studio（自带 package.json，需单独 npm install；schemaTypes: galleryProject / studioItem / awardCertificate / globalInfo / faq）
 scripts/         # 构建期/维护脚本
@@ -196,7 +196,7 @@ vite.config.js   # react() + viteCompression() + generateSeoHtml()，dev 期 /sa
 | `siteBase()`、`titleWithSite(page)` | 去尾斜杠的根地址；`页面 — 站名` 标题 | 全站 |
 
 - 构建期可用环境变量 `SITE_URL` 或 `CF_PAGES_URL` 覆盖域名，无需改代码；浏览器端 canonical/og:url 用 `window.location.origin`，本地与预览域名都不会写错。
-- **换域名 / 换站名**：改 `src/config/site.js` →（必要时）同步 `public/robots.txt` 的 Sitemap 行 → 完成。`index.html` 的静态占位、`seo-plugin.js` 的 JSON-LD、`sitemap.xml` 都从这里派生。
+- **换域名 / 换站名**：只改 `src/config/site.js`（或设环境变量 `SITE_URL` / `CF_PAGES_URL`）→ 完成。`index.html` 的静态占位、`seo-plugin.js` 的 JSON-LD、`sitemap.xml` 与 `robots.txt` 的 Sitemap 行都从这里派生，没有第二处要手改的域名。
 
 **`fonts.js` + `text/Text.jsx` —— 中文能不能显示的关键**
 
@@ -308,6 +308,7 @@ src/content/posts/*.md
 - 注入 JSON-LD 结构化数据（作者、房间列表、项目条目，以及 `Blog` + 每篇一个 `BlogPosting`）；
 - 生成 `llms.txt`（含「博客文章」清单）；
 - **从 `ROOMS` 与文章生成 `sitemap.xml`**（新增房间 / 新增文章都自动进站点地图，无需手动维护；文章 `lastmod` = 发布日期）；
+- **生成 `robots.txt`**（爬虫白名单见 `ROBOTS_ALLOWED_AGENTS`，Sitemap 地址取自 `SITE_BASE`——换域名不会出现 robots 指向旧域名的不一致；dev 期由插件中间件提供同一份内容）；
 - 覆写 `index.html` 的 `<title>` / `<meta name="description">` / `canonical` / `og:url` / `og:image` / `twitter:image`。
 
 > 博客这部分**不依赖 Sanity**：即使 Sanity 抓取失败（`catch` 分支），文章仍会带着自己的 JSON-LD 注入 SEO 输出。
@@ -339,9 +340,9 @@ src/content/posts/*.md
 | `index.html` | 静态占位（title/description/canonical/og:/twitter:），构建期由 `seo-plugin.js` 重写 |
 | `seo-plugin.js` | JSON-LD `@id`、canonical、`og:url`、`og:image`、Sitemap 行、`sitemap.xml` |
 | `src/hooks/useDocumentMeta.js` | 运行时 canonical / `og:url`（用 `window.location.origin`） |
-| `public/robots.txt` | Sitemap 行（**这个仍需手动同步**） |
+| `seo-plugin.js` 的 `buildRobotsTxt()` | `robots.txt` 全文（构建期写入 dist，dev 期由中间件提供） |
 
-⚠️ 迁移自上游的 `itomdev.com` 域名已全部替换；若部署到自建域名，别忘了 `public/robots.txt` 与 `public/_headers` 里的注释示例。
+⚠️ 迁移自上游的 `itomdev.com` 域名已全部替换；若部署到自建域名，别忘了 `public/_headers` 里的注释示例（预览域名防收录）。
 
 ### 10.2 3D 文字字体（✅ 中文已本地化，剩少数符号）
 
@@ -366,7 +367,6 @@ src/content/posts/*.md
 ### 10.5 新增房间时仍需手动处理的事
 
 - `index.html` 的 `#seo-content`：仅 dev 与无 JS 兜底用，构建期会被重写，可选维护。
-- `public/robots.txt`：站点地图地址（换域名时）。
 - 若新房间用了新的中文字符集之外的符号，注意 §10.2 的字体覆盖问题。
 
 ---
@@ -392,3 +392,7 @@ src/content/posts/*.md
 - UI：新增 `src/components/dom/Blog/BlogPage.jsx`（入口遮罩 + 列表 + 正文 + 标签筛选 + 上一篇/下一篇；进场/退场动画、焦点转移、Esc 关闭）与 `src/styles/BlogPage.scss`（沿用纸质手绘风格，中文正文用本地霞鹜文楷）；`App.jsx` 挂载遮罩；`NavigationUI` 新增 `onBackOverride`（打开博客时返回按钮变「关闭遮罩」、隐藏其它面板、加 `.over-blog` 提到 `z-index: 300`）与「阅读博客」按钮；`ScreenReaderOverlay` 增加 `/blog` 链接。
 - 构建期 SEO：`seo-plugin.js` 用 `node:fs` 读 `src/content/posts/*.md`（复用 `postRecord.js`），把文章写进 `sitemap.xml`（含每篇的 `lastmod` 与 `changefreq`）、JSON-LD（`Blog` + `BlogPosting`）、`llms.txt` 与 `#seo-content`；这部分放在 Sanity 的 `try/catch` 之外，Sanity 不可用时文章照样进 SEO。`index.html` 静态兜底同步补上 `/blog`。
 - 顺带修复：`markdown.js` 的行内代码规则改为成对反引号定界（用双反引号包住单个反引号的写法之前会漏出多余反引号）；`markdownToPlainText` 的标题曾错误输出 `#`。
+
+**2026-09-23 · robots.txt 改为构建期生成**
+- 删除 `public/robots.txt`，改由 `seo-plugin.js` 的 `buildRobotsTxt()` 在构建期生成（爬虫白名单见 `ROBOTS_ALLOWED_AGENTS`，Sitemap 地址取自 `SITE_BASE`）。这样换域名只需改 `src/config/site.js`，或设 `SITE_URL` / `CF_PAGES_URL` 环境变量，不会再出现「robots.txt 指向旧域名、sitemap.xml 在新域名」的不一致。
+- dev 期由 `configureServer` 中间件在 `/robots.txt` 提供同一份内容（与既有的 `/llms.txt` 一致），所以删掉 public 里的文件后本地仍能查看。

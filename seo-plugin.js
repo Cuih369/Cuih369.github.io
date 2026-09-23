@@ -17,6 +17,41 @@ const sanityClient = createClient({
 // 站点绝对地址：优先环境变量（Cloudflare Pages 构建期提供 CF_PAGES_URL），否则读 src/config/site.js
 const SITE_BASE = (process.env.SITE_URL || process.env.CF_PAGES_URL || SITE_URL).replace(/\/+$/, '');
 
+// =============================================================================
+// robots.txt（构建期生成）
+// -----------------------------------------------------------------------------
+// 以前是 public/robots.txt，但里面的 Sitemap 行必须跟着 SITE_BASE 走，
+// 否则换域名后会出现「robots.txt 指向旧域名 / sitemap.xml 在新域名」的不一致。
+// 现在与 sitemap.xml 一样在构建期生成：换域名只改 src/config/site.js（或设环境变量）。
+// =============================================================================
+
+/** 允许抓取的 User-agent：'*' 之外都是 AI / 搜索相关爬虫 */
+const ROBOTS_ALLOWED_AGENTS = [
+    '*',
+    'GPTBot',
+    'OAI-SearchBot',
+    'Google-Extended',
+    'PerplexityBot',
+    'ClaudeBot',
+    'Applebot-Extended',
+    'Meta-ExternalAgent',
+];
+
+/** 生成 robots.txt 内容（Sitemap 地址取自 SITE_BASE） */
+function buildRobotsTxt() {
+    const lines = [];
+    ROBOTS_ALLOWED_AGENTS.forEach((agent) => {
+        lines.push('User-agent: ' + agent);
+        lines.push('Allow: /');
+        lines.push('');
+    });
+    lines.push('# Sitemap 地址在构建期由 src/config/site.js 的 SITE_URL 生成；');
+    lines.push('# Cloudflare Pages 等 CI 可用环境变量 SITE_URL / CF_PAGES_URL 覆盖');
+    lines.push('Sitemap: ' + SITE_BASE + '/sitemap.xml');
+    lines.push('');
+    return lines.join('\n');
+}
+
 // Tech stack filename -> human-readable name mapping for JSON-LD
 // 平台标识 → 展示名称映射（供爬虫读取的语义 HTML 使用）
 const PLATFORM_LABELS = {
@@ -492,6 +527,10 @@ export function generateSeoHtml() {
                     const content = await getLlmsContent();
                     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
                     res.end(content);
+                } else if (req.url === '/robots.txt') {
+                    // 构建期才写进 dist，dev 期这里给一份，方便对照 Sitemap 地址
+                    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+                    res.end(buildRobotsTxt());
                 } else {
                     next();
                 }
@@ -708,6 +747,13 @@ export function generateSeoHtml() {
                 this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemap });
             } catch (error) {
                 console.error('SEO Plugin Error: failed to generate sitemap.xml', error);
+            }
+
+            // robots.txt 同样在构建期生成：Sitemap 行必须跟着 SITE_BASE 走
+            try {
+                this.emitFile({ type: 'asset', fileName: 'robots.txt', source: buildRobotsTxt() });
+            } catch (error) {
+                console.error('SEO Plugin Error: failed to generate robots.txt', error);
             }
         }
     };

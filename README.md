@@ -114,7 +114,7 @@ portfolio-itom/            # 独立的 Sanity Studio（在它自己的目录里 
 | 事项 | 位置 | 说明 |
 |------|------|------|
 | 域名 / 站名 / 作者 / 社交链接 | `src/config/site.js` | `SITE_URL`、`SITE_NAME`、`AUTHOR_*`、`SOCIAL_URLS`。社交链接留空则「联系方式」房间不渲染对应木桶 |
-| 站点地图地址 | `public/robots.txt` | 换域名后同步 Sitemap 行 |
+| 爬虫策略 | `seo-plugin.js` 的 `ROBOTS_ALLOWED_AGENTS` | `robots.txt` 在构建期生成，Sitemap 地址自动取自 `site.js`，换域名不用手改 |
 | 预览域名防收录 | `public/_headers` | 按注释取消 `X-Robots-Tag: noindex` 并填项目名 |
 | 联系表单 | 环境变量 `VITE_WEB3FORMS_KEY` | 到 [Web3Forms](https://web3forms.com) 申领自己的 key；预览域名可用 `VITE_EXTRA_ALLOWED_ORIGINS` 放行（本地 localhost 始终放行） |
 | 内容源 | `src/config/sanity.js`、`portfolio-itom/` | 默认仍是上游的 Sanity 项目（`kv5wjjmj`），建议换成自己的项目 |
