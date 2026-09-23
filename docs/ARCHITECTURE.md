@@ -265,6 +265,61 @@ src/content/posts/*.md
 
 ---
 
+### 7.2 作品集厅（Gallery）内容维护：增 / 改 / 删
+
+作品集厅墙上挂 10 张卡片（`PROJECT_COUNT`）：正面是项目封面，桌面端悬停会「涂色」成 `painted` 版本，翻到背面显示标题、描述、技术栈与「访问项目」按钮（点击新窗口打开 `url`）。
+
+**数据来源两条，Sanity 优先**：
+
+| 优先级 | 来源 | 位置 |
+| --- | --- | --- |
+| 1（优先） | Sanity 数据集的 `galleryProject` 文档 | `src/hooks/useSanityData.js` 的 `loadSanityData()` |
+| 2（回退） | 本地数组 `FALLBACK_PROJECTS` | `src/components/canvas/rooms/Gallery/GalleryRoom.jsx:39` |
+
+⚠️ 现状：`src/config/sanity.js` 里仍是上游 `projectId: 'kv5wjjmj'`，该数据集有 4 条 `galleryProject`（ADAM & EWA / 67 GAME / YOUNG MULTI / UI COMP）→ **线上和本地都走 Sanity，只改 `FALLBACK_PROJECTS` 不会有任何效果**。所以第一步是先选内容源：
+
+**A. 改本地数组（不需要 Sanity 账号，推荐）**
+
+1. 断开 Sanity：把 `src/config/sanity.js` 的 `projectId` 改成占位值（`'YOUR_PROJECT_ID'`）或空串。`isSanityConfigured` 随之变 false → `loadSanityData()` 立刻返回空 → `useGalleryProjects()` 返回 `null`。同理 Studio 回退 `Studio/contentData.js`，About 回退 `InfiniteSkyManager.jsx` 的 `AWARDS_DATA`（三个房间一起切换，别只改一个）。
+2. 编辑 `FALLBACK_PROJECTS`（`GalleryRoom.jsx:39`），一条 = 一张卡：
+
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| `title` | 是 | 卡片背面标题（`CabinSketch-Bold`，`maxWidth=1.1`，过长会自动换行） |
+| `front` | 是 | 正面封面图路径，如 `/textures/gallery/yourprojectprzod.webp` |
+| `painted` | 否 | 桌面端悬停「涂色」用的版本；缺失则不做涂色效果（触屏本来就用 `front`） |
+| `url` | 是 | 「访问项目」按钮打开的地址 |
+| `description` | 否 | 卡片背面描述；不填会用占位文案 |
+| `techStack` | 否 | 技术栈图标路径数组，背面横排，**建议 3~4 个**（间距固定 0.30，多了会互相压） |
+| `id` | 否 | 仅作标识，不参与渲染 |
+
+3. 图片素材：放进 `public/textures/gallery/`（文件名随意，数组里写全路径即可），`.webp` 格式。
+   - **尺寸/比例**：卡片平面是 1.5×2（3:4），贴图会被拉伸到这个比例。线上 Sanity 用的原图是 1696×2528（≈2:3），本地回退用的是 1024×2048（1:2）。想和线上观感一致 → 用 **2:3 竖版（如 1200×1800）**；想要零拉伸 → 用 **3:4（如 1024×1365）**。
+   - **涂色版**：同尺寸、同构图、只差上色风格的 `*_painted.webp`；桌面 hover 时才加载，触屏不会下载（省流量）。
+4. 技术栈图标：数组里写 `/textures/gallery/<name>.webp`。桌面端代码会自动换成 `<name>_painted.webp`（特例：`csslogo` → `css3logo_painted.webp`），所以**两版文件都得存在**，否则该图标一直加载不出来。图标是 1:1 方图（现有 128×128）。
+   新增了图标名，顺手加进 `GalleryRoom.jsx` 的 `allLogos` 白名单（约 239 行）——它负责预加载，不加只是首次翻卡会顿一下。
+5. 卡片数量与间距：`PROJECT_COUNT`（默认 10，墙上循环铺满）与 `GAP`（默认 2.5）。项目数少于 10 时会重复出现；多于 10 时只显示前 10 个 —— 要全显示就把 `PROJECT_COUNT` 调到 ≥ 项目数。
+
+**B. 用自己的 Sanity（有账号时可选，改内容不用改代码）**
+
+在 `portfolio-itom/`（Sanity Studio）里新建 `galleryProject` 文档，字段：`title`、`slug.current`（当作 id）、`url`、`description`、`frontImage`、`paintedImage`、`techStack`（数组，元素写成 `xxxlogo.webp` 这类文件名，代码会拼成 `/textures/gallery/<文件名>`）。然后把 `src/config/sanity.js` 的 `projectId` 换成自己的项目。
+
+**删除**：从 `FALLBACK_PROJECTS` 里删掉那一项（或删掉 Sanity 文档）即可；`public/textures/gallery/` 里的图片可留可删（无引用就不会被加载）。
+
+**验证**：`npm run dev` → 进作品集厅，依次看卡片数量、封面、悬停涂色、翻面（标题/描述/技术栈）、「访问项目」链接；确认后 `git push`，线上会自动重新部署。
+
+> 防呆：`front` / `painted` / `techStack` 引用的文件必须真实存在，否则 drei 的 `useTexture` 会一直 suspense，卡片区域不出内容。
+
+**其它房间的内容位置**
+
+| 房间 | 内容文件 | 说明 |
+| --- | --- | --- |
+| 作品集 The Gallery | `rooms/Gallery/GalleryRoom.jsx` 的 `FALLBACK_PROJECTS`（:39） | 项目卡（本节） |
+| 工作室 The Studio | `rooms/Studio/contentData.js` 的 `CONTENT_DATA` | 悬浮显示器里的视频/文章条目（28 条示例） |
+| 关于 The About | `rooms/About/InfiniteSkyManager.jsx` 的 `AWARDS_DATA`（:420） | 奖项/里程碑与证书图（`/textures/about/*.webp`） |
+| 联系 Let's Connect | `src/config/site.js` 的 `SOCIAL_URLS`、`Contact/MessagePaper.jsx` | 社交木桶（留空则不渲染）与留言表单 |
+| 房间本体（门、门牌、路由、标题） | `src/config/rooms.js` + `rooms/roomRegistry.jsx` | 增删房间见 §6 |
+
 ## 8. 资源与性能管线
 
 ### 8.1 体积现状

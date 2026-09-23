@@ -133,6 +133,7 @@ portfolio-itom/            # 独立的 Sanity Studio（在它自己的目录里 
 | 内容源 | `src/config/sanity.js`、`portfolio-itom/` | 默认仍是上游的 Sanity 项目（`kv5wjjmj`），建议换成自己的项目 |
 | 文章 | `src/content/posts/*.md` | 示例文章（写作说明 + 设计取舍）可以直接删掉，换成自己的文章 |
 | 示例内容 | `rooms/Gallery/GalleryRoom.jsx`、`rooms/About/InfiniteSkyManager.jsx`、`rooms/Studio/contentData.js` | 目前是上游作者的示例作品/奖项，**必须替换成你自己的**（见 `docs/ARCHITECTURE.md` §10.3） |
+| 作品集厅内容（增 / 改 / 删） | `rooms/Gallery/GalleryRoom.jsx` 的 `FALLBACK_PROJECTS` | 默认被 Sanity 数据集覆盖，要先断开 `src/config/sanity.js` 的 `projectId`；字段说明与图片尺寸要求见 `docs/ARCHITECTURE.md` §7.2 |
 | 分享图 | `public/og-image.png` | 1200×630 占位图（纯文字，无美术素材）；换成自己的图后同步 `index.html` 与 `seo-plugin.js` 里的 `og:image` |
 | 素材版权 | `public/textures/**` | 上游手绘素材版权归原作者，长期公开发布请替换 |
 
