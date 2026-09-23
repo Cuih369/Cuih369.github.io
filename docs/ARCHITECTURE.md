@@ -319,11 +319,25 @@ src/content/posts/*.md
 
 ### 9.3 部署形态
 
-从仓库现有配置看，部署目标是 **Cloudflare Pages**：
+站点当前发布在 **GitHub Pages（用户站点）**：<https://cuih369.github.io/>
 
-- `functions/sanity-cdn/[[catchall]].js`：边缘代理 `cdn.sanity.io`（dev 期由 `vite.config.js` 的 `/sanity-cdn` 代理提供同等行为）；
-- `public/_headers`：响应头；
-- `public/_redirects`：SPA 回退。
+| 项 | 值 |
+| --- | --- |
+| 仓库 | `Cuih369/Cuih369.github.io`（**仓库名必须是 `<用户名>.github.io`**，理由见下） |
+| 工作流 | `.github/workflows/deploy-pages.yml`（push `main` 自动部署，也可手动 `workflow_dispatch`） |
+| 发布源 | 仓库 Settings → Pages → Source = **GitHub Actions** |
+| 站点地址 | `src/config/site.js` 的 `SITE_URL`（唯一来源，canonical / og / sitemap / robots 全跟着走） |
+
+工作流四步：`npm ci`（Node 22）→ `npm run build` → 冒烟检查 `dist/{index.html,404.html,sitemap.xml,robots.txt,llms.txt}` → `upload-pages-artifact` + `deploy-pages`。产物约 110 MB，大头是 `public/textures`（约 86 MB）与中文字体（13 MB）。
+
+⚠️ **为什么必须是「用户站点」仓库名**：GitHub 只把 `<用户名>.github.io` 这个仓库发布在域名根路径。若换成普通仓库名（例如 `blog`），站点会落在 `https://<用户名>.github.io/blog/` 子路径，而站内约 450 处根绝对路径（`/textures/...`、`/fonts/...`，散落在 JSX 字符串与模板字面量里，Vite 的 `base` 不会改写它们）都会 404，前端路由 `/blog` 还会与部署前缀撞名。真要走子路径，需要同时做三件事：`vite.config.js` 加 `base`、把运行时资源路径统一走 `import.meta.env.BASE_URL`（three 的加载器可统一挂 `THREE.DefaultLoadingManager.resolveURL`）、路由加 base 前缀。**不推荐**，所以本项目选择用户站点。
+
+纯静态托管的两个已知差异：
+
+- `functions/sanity-cdn/[[catchall]].js`（Cloudflare Pages Function）**不生效**。因此 `src/config/sanity.js` 的反代改为按需开启：dev 默认走 `vite.config.js` 的 `/sanity-cdn` 代理，生产默认直连 `cdn.sanity.io`（要改回代理就设 `VITE_SANITY_CDN_PROXY`）。
+- `public/_headers`、`public/_redirects` 只有 Cloudflare Pages 认，GitHub Pages 直接忽略（不报错）。SPA 深链回退改由 `seo-plugin.js` 的 `closeBundle()` 把 `dist/index.html` 复制成 `dist/404.html` 实现：访问 `/blog`、`/blog/<slug>`、`/gallery` 时返回 HTTP 404 + 这份 HTML，浏览器地址不变，前端路由接管（Cloudflare 那边仍由 `_redirects` 兜底，两者不冲突）。
+
+换/加部署平台的注意点：`_headers`、`_redirects`、`functions/` 都还在仓库里，Cloudflare Pages 形态没有被破坏。
 
 `portfolio-itom/` 是独立的 Sanity Studio，单独安装依赖与部署（自带 `.gitignore`，不影响主站构建）。
 
@@ -342,7 +356,9 @@ src/content/posts/*.md
 | `src/hooks/useDocumentMeta.js` | 运行时 canonical / `og:url`（用 `window.location.origin`） |
 | `seo-plugin.js` 的 `buildRobotsTxt()` | `robots.txt` 全文（构建期写入 dist，dev 期由中间件提供） |
 
-⚠️ 迁移自上游的 `itomdev.com` 域名已全部替换；若部署到自建域名，别忘了 `public/_headers` 里的注释示例（预览域名防收录）。
+当前值：`SITE_URL = 'https://cuih369.github.io'`（GitHub Pages 用户站点根路径，见 §9.3）；部署工作流里**不写死域名**，所以换域名（含以后绑定自定义域名）依然只改这一处。
+
+⚠️ 迁移自上游的 `itomdev.com` 域名已全部替换。`public/_headers` 里的预览域名防收录只在 Cloudflare Pages 生效（GitHub Pages 不认 `_headers`）。
 
 ### 10.2 3D 文字字体（✅ 中文已本地化，剩少数符号）
 
@@ -357,6 +373,7 @@ src/content/posts/*.md
 - `rooms/Studio/contentData.js`：38 条示例条目（标题/播放量是编造的，`url` 已改为平台首页占位）。
 - `public/og-image.png`（1200×630）已换成纯文字占位图（不含上游美术素材）；换成自己的分享图后记得同步 `index.html` 与 `seo-plugin.js` 里的 `og:image`。
 - `public/textures/**` 是上游手绘素材（`README` 与 `LICENSE` 已注明版权不可复用，长期公开发布建议替换）。
+- ⚠️ **Sanity 数据集仍是上游项目**（`src/config/sanity.js` 与 `seo-plugin.js` 里的 `projectId: 'kv5wjjmj'`）：作品/奖项/工作室条目以及站点标题、描述都在运行时与构建期从上游数据集实时拉取，所以线上首页的 `<title>` / `og:title` / `og:description` 目前仍是上游作者的信息（2026-09-23 实测为 `ITom – Award-Winning Creative Developer | Interactive Websites`），与 `src/config/site.js` 里的站名不一致。要么换成自己的 Sanity 项目（并同步 `projectId`），要么按 §7 改走本地数据。
 
 ### 10.4 死代码 / 可清理项
 
@@ -396,3 +413,12 @@ src/content/posts/*.md
 **2026-09-23 · robots.txt 改为构建期生成**
 - 删除 `public/robots.txt`，改由 `seo-plugin.js` 的 `buildRobotsTxt()` 在构建期生成（爬虫白名单见 `ROBOTS_ALLOWED_AGENTS`，Sitemap 地址取自 `SITE_BASE`）。这样换域名只需改 `src/config/site.js`，或设 `SITE_URL` / `CF_PAGES_URL` 环境变量，不会再出现「robots.txt 指向旧域名、sitemap.xml 在新域名」的不一致。
 - dev 期由 `configureServer` 中间件在 `/robots.txt` 提供同一份内容（与既有的 `/llms.txt` 一致），所以删掉 public 里的文件后本地仍能查看。
+
+**2026-09-23 · 接入 GitHub Pages 部署**
+- 仓库改名为 `Cuih369.github.io`（用户站点 → 域名根路径），Pages 发布源设为 **GitHub Actions**；线上地址 <https://cuih369.github.io/>。改名理由与子路径部署的代价见 §9.3。
+- 新增 `.github/workflows/deploy-pages.yml`：`npm ci`（Node 22）+ `npm run build` + 产物冒烟检查（index/404/sitemap/robots/llms）+ `upload-pages-artifact` / `deploy-pages`，并在部署前 `touch dist/.nojekyll`。并发组 `github-pages`，不打断进行中的发布。
+- `seo-plugin.js`：新增 `configResolved` 记录 `command` / `build.outDir`；新增 `closeBundle()`，构建期把 `dist/index.html` 复制成 `dist/404.html`（纯静态托管的 SPA 深链回退）。
+- `src/config/sanity.js`：Sanity CDN 反代改为按需开启（`VITE_SANITY_CDN_PROXY`；dev 默认开、生产默认关），否则 GitHub Pages 上 Sanity 图片会全部 404。
+- `SITE_URL` 改为 `https://cuih369.github.io`，`index.html` 里 4 处静态占位（canonical / og:url / og:image / twitter:image）同步替换，仓库内不再有 `example.com` 残留。
+- 线上验收（curl，经代理）：`/` 200；`/blog`、`/blog/<slug>`、`/gallery` 返回 404 + 与 `index.html` 完全相同的 404.html（SPA 回退生效）；`/textures/paper-texture.webp`、`/fonts/LXGWWenKaiLite-Regular.ttf`、`/images/map.webp`、`/favico.png`、`/og-image.png`、`/llms.txt` 全部 200；`sitemap.xml` / `robots.txt` 域名正确且含两篇示例文章；生产包内 `/sanity-cdn` 出现 0 次、`cdn.sanity.io` 正常。
+- 遗留：Sanity 仍是上游数据集，线上标题/文案为上游作者信息（见 §10.3）。

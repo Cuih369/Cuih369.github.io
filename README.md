@@ -73,6 +73,18 @@ npm run lint       # ESLint
 
 > 项目包含数百张高分辨率纹理（`public/textures` 约 86 MB）与一个 13 MB 的中文字体（`public/fonts/LXGWWenKaiLite-Regular.ttf`），dev 环境首次加载会偏慢属正常现象。
 
+## 部署（GitHub Pages）
+
+已配置好自动部署：**push 到 `main` 就会构建并发布**，线上地址 <https://cuih369.github.io/>。
+
+- 工作流：`.github/workflows/deploy-pages.yml`（`npm ci` → `npm run build` → 产物冒烟检查 → `upload-pages-artifact` + `deploy-pages`），也可在 Actions 页手动触发（`workflow_dispatch`）。
+- 发布源：仓库 Settings → Pages → Source = **GitHub Actions**。
+- 域名：只由 `src/config/site.js` 的 `SITE_URL` 决定（canonical / og / `sitemap.xml` / `robots.txt` 全跟着走），以后绑定自定义域名只改这一行，不用动工作流。
+- ⚠️ 仓库名必须是 `<用户名>.github.io`，GitHub 才会把站点发布在域名根路径。若改成普通仓库名（如 `blog`），站点会落到 `/blog/` 子路径，需要同时改 `vite` 的 `base`、约 450 处资源路径与前端路由前缀 —— 原因与替代方案见 `docs/ARCHITECTURE.md` §9.3。
+- 纯静态托管的两点差异：Cloudflare 的 `functions/sanity-cdn` 反代不生效（生产直连 `cdn.sanity.io`）；`_headers`/`_redirects` 被忽略，SPA 深链回退改由构建期生成的 `dist/404.html` 承担（所以 `/blog/<slug>` 直接访问也能正常打开，HTTP 状态码是 404 但页面渲染正常）。
+
+其他平台（Cloudflare Pages 等）也能部署，仓库里的 `_headers`、`_redirects`、`functions/` 仍然为它保留。
+
 ## 目录结构
 
 ```
@@ -114,6 +126,7 @@ portfolio-itom/            # 独立的 Sanity Studio（在它自己的目录里 
 | 事项 | 位置 | 说明 |
 |------|------|------|
 | 域名 / 站名 / 作者 / 社交链接 | `src/config/site.js` | `SITE_URL`、`SITE_NAME`、`AUTHOR_*`、`SOCIAL_URLS`。社交链接留空则「联系方式」房间不渲染对应木桶 |
+| 部署 / 仓库名 | GitHub 仓库名 | 必须是 `<用户名>.github.io` 才能发布在域名根路径；发布流程见下文「部署（GitHub Pages）」 |
 | 爬虫策略 | `seo-plugin.js` 的 `ROBOTS_ALLOWED_AGENTS` | `robots.txt` 在构建期生成，Sitemap 地址自动取自 `site.js`，换域名不用手改 |
 | 预览域名防收录 | `public/_headers` | 按注释取消 `X-Robots-Tag: noindex` 并填项目名 |
 | 联系表单 | 环境变量 `VITE_WEB3FORMS_KEY` | 到 [Web3Forms](https://web3forms.com) 申领自己的 key；预览域名可用 `VITE_EXTRA_ALLOWED_ORIGINS` 放行（本地 localhost 始终放行） |
