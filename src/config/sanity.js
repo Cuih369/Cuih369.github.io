@@ -1,17 +1,27 @@
 import { createClient } from '@sanity/client';
 import { createImageUrlBuilder } from '@sanity/image-url';
 
-export const sanityClient = createClient({
-    projectId: 'kv5wjjmj', // 在 Sanity 中创建项目后会补全
-    dataset: 'production',
-    useCdn: true, // 开发环境设为 `false`，生产环境设为 `true` 以提升速度
-    apiVersion: '2024-03-01', // 当前 API 日期
-});
+// 接入方式：把占位值换成你自己的 Sanity projectId（只允许 a-z、0-9 与短横线）。
+// 保持占位值 / 留空 = 未接入 Sanity，运行时与构建期都直接用本地回退数据。
+export const SANITY_PROJECT_ID = 'YOUR_PROJECT_ID';
 
-const builder = createImageUrlBuilder(sanityClient);
+/** 是否已接入真实的 Sanity 项目 */
+export const isSanityConfigured = Boolean(SANITY_PROJECT_ID) && SANITY_PROJECT_ID !== 'YOUR_PROJECT_ID';
+
+// 未接入时不创建 client：@sanity/client v7 会校验 projectId 格式，占位值会直接抛错
+export const sanityClient = isSanityConfigured
+    ? createClient({
+        projectId: SANITY_PROJECT_ID,
+        dataset: 'production',
+        useCdn: true, // 开发环境设为 `false`，生产环境设为 `true` 以提升速度
+        apiVersion: '2024-03-01', // 当前 API 日期
+    })
+    : null;
+
+const builder = sanityClient ? createImageUrlBuilder(sanityClient) : null;
 
 // 用于生成 Sanity 图片地址的辅助函数
-export const urlFor = (source) => builder.image(source);
+export const urlFor = (source) => (builder ? builder.image(source) : null);
 
 // 将 Sanity 域名替换为代理路径的辅助函数
 //

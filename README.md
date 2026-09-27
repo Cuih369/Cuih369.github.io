@@ -130,7 +130,7 @@ portfolio-itom/            # 独立的 Sanity Studio（在它自己的目录里 
 | 爬虫策略 | `seo-plugin.js` 的 `ROBOTS_ALLOWED_AGENTS` | `robots.txt` 在构建期生成，Sitemap 地址自动取自 `site.js`，换域名不用手改 |
 | 预览域名防收录 | `public/_headers` | 按注释取消 `X-Robots-Tag: noindex` 并填项目名 |
 | 联系表单 | 环境变量 `VITE_WEB3FORMS_KEY` | 到 [Web3Forms](https://web3forms.com) 申领自己的 key；预览域名可用 `VITE_EXTRA_ALLOWED_ORIGINS` 放行（本地 localhost 始终放行） |
-| 内容源 | `src/config/sanity.js`、`portfolio-itom/` | 默认仍是上游的 Sanity 项目（`kv5wjjmj`），建议换成自己的项目 |
+| 内容源 | `src/config/sanity.js`、`portfolio-itom/` | 已断开 Sanity（`projectId` 为占位值 `'YOUR_PROJECT_ID'`），内容全部走本地回退数据；想接自己的 Sanity 见 `docs/ARCHITECTURE.md` §7.2 B |
 | 文章 | `src/content/posts/*.md` | 示例文章（写作说明 + 设计取舍）可以直接删掉，换成自己的文章 |
 | 示例内容 | `rooms/Gallery/GalleryRoom.jsx`、`rooms/About/InfiniteSkyManager.jsx`、`rooms/Studio/contentData.js` | 目前是上游作者的示例作品/奖项，**必须替换成你自己的**（见 `docs/ARCHITECTURE.md` §10.3） |
 | 作品集厅内容（增 / 改 / 删） | `rooms/Gallery/GalleryRoom.jsx` 的 `FALLBACK_PROJECTS` | 默认被 Sanity 数据集覆盖，要先断开 `src/config/sanity.js` 的 `projectId`；字段说明与图片尺寸要求见 `docs/ARCHITECTURE.md` §7.2 |

@@ -7,12 +7,19 @@ import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, AUTHOR_NAME, AUTHOR_HANDLE } fro
 import { collectPosts } from './src/content/postRecord.js';
 import { markdownToPlainText } from './src/content/markdown.js';
 
-const sanityClient = createClient({
-    projectId: 'kv5wjjmj', // TODO: 换成你自己的 Sanity projectId，或改走本地数据（见 docs/ARCHITECTURE.md §7）
-    dataset: 'production',
-    useCdn: true,
-    apiVersion: '2024-03-01',
-});
+// 接入方式：换成你自己的 Sanity projectId（只允许 a-z、0-9 与短横线）。
+// 保持占位值 / 留空 = 未接入 Sanity，SEO 直接用本地数据（见 docs/ARCHITECTURE.md §7.2）
+const SANITY_PROJECT_ID = 'YOUR_PROJECT_ID';
+const isSanityConfigured = Boolean(SANITY_PROJECT_ID) && SANITY_PROJECT_ID !== 'YOUR_PROJECT_ID';
+
+const sanityClient = isSanityConfigured
+    ? createClient({
+        projectId: SANITY_PROJECT_ID,
+        dataset: 'production',
+        useCdn: true,
+        apiVersion: '2024-03-01',
+    })
+    : null;
 
 // 站点绝对地址：优先环境变量（Cloudflare Pages 构建期提供 CF_PAGES_URL），否则读 src/config/site.js
 const SITE_BASE = (process.env.SITE_URL || process.env.CF_PAGES_URL || SITE_URL).replace(/\/+$/, '');
@@ -501,6 +508,10 @@ export function generateSeoHtml() {
 
     async function getLlmsContent() {
         if (!cachedLlmsContent) {
+            if (!isSanityConfigured) {
+                cachedLlmsContent = buildLlmsTxt(null, null, null, null, null, loadPosts());
+                return cachedLlmsContent;
+            }
             try {
                 const [globalInfo, projects, studio, awards, faqList] = await Promise.all([
                     sanityClient.fetch(`*[_id == "globalInfo"][0]`),
@@ -548,6 +559,8 @@ export function generateSeoHtml() {
         async transformIndexHtml(html) {
             // 本地 Markdown 文章：不依赖 Sanity，放在 try 外面也能用
             const posts = loadPosts();
+            // 未接入 Sanity：保留 index.html 里的静态 #seo-content，只补博客段落
+            if (!isSanityConfigured) return injectBlogSeo(html, posts, true);
 
             try {
                 // Fetch all data in parallel

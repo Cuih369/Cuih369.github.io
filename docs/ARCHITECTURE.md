@@ -276,11 +276,11 @@ src/content/posts/*.md
 | 1（优先） | Sanity 数据集的 `galleryProject` 文档 | `src/hooks/useSanityData.js` 的 `loadSanityData()` |
 | 2（回退） | 本地数组 `FALLBACK_PROJECTS` | `src/components/canvas/rooms/Gallery/GalleryRoom.jsx:39` |
 
-⚠️ 现状：`src/config/sanity.js` 里仍是上游 `projectId: 'kv5wjjmj'`，该数据集有 4 条 `galleryProject`（ADAM & EWA / 67 GAME / YOUNG MULTI / UI COMP）→ **线上和本地都走 Sanity，只改 `FALLBACK_PROJECTS` 不会有任何效果**。所以第一步是先选内容源：
+✅ 现状：**Sanity 已断开**（`src/config/sanity.js` 与 `seo-plugin.js` 的 `projectId` 都是占位值 `'YOUR_PROJECT_ID'`）→ **三个房间都在用本地回退数据**，直接改下面的本地数组就会生效：
 
 **A. 改本地数组（不需要 Sanity 账号，推荐）**
 
-1. 断开 Sanity：把 `src/config/sanity.js` 的 `projectId` 改成占位值（`'YOUR_PROJECT_ID'`）或空串。`isSanityConfigured` 随之变 false → `loadSanityData()` 立刻返回空 → `useGalleryProjects()` 返回 `null`。同理 Studio 回退 `Studio/contentData.js`，About 回退 `InfiniteSkyManager.jsx` 的 `AWARDS_DATA`（三个房间一起切换，别只改一个）。
+1. 断开 Sanity（**已完成**）：`src/config/sanity.js` 的 `projectId` 是占位值 `'YOUR_PROJECT_ID'`（**必须正好是这串字符**，空串不会让 `isSanityConfigured` 变 false）。此时 `loadSanityData()` 立刻返回空 → `useGalleryProjects()` 返回 `null`。同理 Studio 回退 `Studio/contentData.js`，About 回退 `InfiniteSkyManager.jsx` 的 `AWARDS_DATA`（三个房间一起切换，别只改一个）；构建期 `seo-plugin.js` 用同一个开关跳过 Sanity 请求。
 2. 编辑 `FALLBACK_PROJECTS`（`GalleryRoom.jsx:39`），一条 = 一张卡：
 
 | 字段 | 必填 | 说明 |
@@ -315,7 +315,7 @@ src/content/posts/*.md
 | 房间 | 内容文件 | 说明 |
 | --- | --- | --- |
 | 作品集 The Gallery | `rooms/Gallery/GalleryRoom.jsx` 的 `FALLBACK_PROJECTS`（:39） | 项目卡（本节） |
-| 工作室 The Studio | `rooms/Studio/contentData.js` 的 `CONTENT_DATA` | 悬浮显示器里的视频/文章条目（28 条示例） |
+| 工作室 The Studio | `rooms/Studio/contentData.js` 的 `CONTENT_DATA` | 悬浮显示器里的视频/文章条目（现生效 8 条 blog；YouTube/TikTok 示例已注释，取消注释即可恢复） |
 | 关于 The About | `rooms/About/InfiniteSkyManager.jsx` 的 `AWARDS_DATA`（:420） | 奖项/里程碑与证书图（`/textures/about/*.webp`） |
 | 联系 Let's Connect | `src/config/site.js` 的 `SOCIAL_URLS`、`Contact/MessagePaper.jsx` | 社交木桶（留空则不渲染）与留言表单 |
 | 房间本体（门、门牌、路由、标题） | `src/config/rooms.js` + `rooms/roomRegistry.jsx` | 增删房间见 §6 |
@@ -428,7 +428,7 @@ src/content/posts/*.md
 - `rooms/Studio/contentData.js`：38 条示例条目（标题/播放量是编造的，`url` 已改为平台首页占位）。
 - `public/og-image.png`（1200×630）已换成纯文字占位图（不含上游美术素材）；换成自己的分享图后记得同步 `index.html` 与 `seo-plugin.js` 里的 `og:image`。
 - `public/textures/**` 是上游手绘素材（`README` 与 `LICENSE` 已注明版权不可复用，长期公开发布建议替换）。
-- ⚠️ **Sanity 数据集仍是上游项目**（`src/config/sanity.js` 与 `seo-plugin.js` 里的 `projectId: 'kv5wjjmj'`）：作品/奖项/工作室条目以及站点标题、描述都在运行时与构建期从上游数据集实时拉取，所以线上首页的 `<title>` / `og:title` / `og:description` 目前仍是上游作者的信息（2026-09-23 实测为 `ITom – Award-Winning Creative Developer | Interactive Websites`），与 `src/config/site.js` 里的站名不一致。要么换成自己的 Sanity 项目（并同步 `projectId`），要么按 §7 改走本地数据。
+- ✅ **已断开 Sanity**：`src/config/sanity.js` 与 `seo-plugin.js` 的 `projectId` 都是占位值 `'YOUR_PROJECT_ID'`，运行时与构建期都不再请求 Sanity。SEO 走 `index.html` 里的静态 `#seo-content` + 本地 Markdown 文章，站点标题/描述取自 `src/config/site.js`。想改回 CMS 驱动见 §7.2 B。
 
 ### 10.4 死代码 / 可清理项
 

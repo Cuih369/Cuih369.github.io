@@ -7,7 +7,7 @@ export default defineConfig({
   name: 'default',
   title: '个人博客 Studio',
 
-  projectId: 'kv5wjjmj',
+  projectId: 'YOUR_PROJECT_ID', // 未接入 Sanity 时保持占位值；要用自己的项目就填真实 projectId
   dataset: 'production',
 
   plugins: [
